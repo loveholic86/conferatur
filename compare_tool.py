@@ -9,13 +9,175 @@
 """
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext
+from tkinter import ttk, filedialog, messagebox, scrolledtext, simpledialog
 import os
 import hashlib
 import difflib
 import shutil
+import json
 from datetime import datetime
 from pathlib import Path
+
+
+class DataManager:
+    """히스토리 및 즐겨찾기 데이터 관리"""
+
+    def __init__(self):
+        self.config_dir = Path.home() / '.conferatur'
+        self.config_file = self.config_dir / 'config.json'
+        self.max_history = 20
+
+        # 디렉토리 생성
+        self.config_dir.mkdir(exist_ok=True)
+
+        # 데이터 구조
+        self.data = {
+            'folder_history': [],
+            'folder_favorites': [],
+            'text_history': [],
+            'text_favorites': [],
+            'file_history': [],
+            'file_favorites': []
+        }
+
+        self.load()
+
+    def load(self):
+        """설정 파일 로드"""
+        if self.config_file.exists():
+            try:
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    loaded_data = json.load(f)
+                    # 기존 데이터와 병합 (새 키가 추가되었을 경우 대비)
+                    self.data.update(loaded_data)
+            except Exception as e:
+                print(f"설정 파일 로드 실패: {e}")
+
+    def save(self):
+        """설정 파일 저장"""
+        try:
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(self.data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"설정 파일 저장 실패: {e}")
+
+    def add_folder_history(self, left, right, method):
+        """폴더 비교 히스토리 추가"""
+        item = {
+            'left': left,
+            'right': right,
+            'method': method,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        # 중복 제거
+        self.data['folder_history'] = [h for h in self.data['folder_history']
+                                       if not (h['left'] == left and h['right'] == right)]
+        self.data['folder_history'].insert(0, item)
+        # 최대 개수 제한
+        self.data['folder_history'] = self.data['folder_history'][:self.max_history]
+        self.save()
+
+    def add_file_history(self, left, right):
+        """파일 비교 히스토리 추가"""
+        item = {
+            'left': left,
+            'right': right,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        # 중복 제거
+        self.data['file_history'] = [h for h in self.data['file_history']
+                                     if not (h['left'] == left and h['right'] == right)]
+        self.data['file_history'].insert(0, item)
+        self.data['file_history'] = self.data['file_history'][:self.max_history]
+        self.save()
+
+    def add_text_history(self, left_text, right_text):
+        """텍스트 비교 히스토리 추가"""
+        # 텍스트는 너무 길 수 있으므로 앞부분만 저장
+        preview_len = 200
+        item = {
+            'left_text': left_text,
+            'right_text': right_text,
+            'left_preview': left_text[:preview_len] + ('...' if len(left_text) > preview_len else ''),
+            'right_preview': right_text[:preview_len] + ('...' if len(right_text) > preview_len else ''),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        self.data['text_history'].insert(0, item)
+        self.data['text_history'] = self.data['text_history'][:self.max_history]
+        self.save()
+
+    def add_folder_favorite(self, name, left, right, method):
+        """폴더 비교 즐겨찾기 추가"""
+        item = {
+            'name': name,
+            'left': left,
+            'right': right,
+            'method': method
+        }
+        self.data['folder_favorites'].append(item)
+        self.save()
+
+    def add_file_favorite(self, name, left, right):
+        """파일 비교 즐겨찾기 추가"""
+        item = {
+            'name': name,
+            'left': left,
+            'right': right
+        }
+        self.data['file_favorites'].append(item)
+        self.save()
+
+    def add_text_favorite(self, name, left_text, right_text):
+        """텍스트 비교 즐겨찾기 추가"""
+        preview_len = 200
+        item = {
+            'name': name,
+            'left_text': left_text,
+            'right_text': right_text,
+            'left_preview': left_text[:preview_len] + ('...' if len(left_text) > preview_len else ''),
+            'right_preview': right_text[:preview_len] + ('...' if len(right_text) > preview_len else '')
+        }
+        self.data['text_favorites'].append(item)
+        self.save()
+
+    def delete_history(self, category, index):
+        """히스토리 삭제"""
+        key = f"{category}_history"
+        if 0 <= index < len(self.data[key]):
+            self.data[key].pop(index)
+            self.save()
+
+    def delete_favorite(self, category, index):
+        """즐겨찾기 삭제"""
+        key = f"{category}_favorites"
+        if 0 <= index < len(self.data[key]):
+            self.data[key].pop(index)
+            self.save()
+
+    def rename_favorite(self, category, index, new_name):
+        """즐겨찾기 이름 변경"""
+        key = f"{category}_favorites"
+        if 0 <= index < len(self.data[key]):
+            self.data[key][index]['name'] = new_name
+            self.save()
+
+    def get_folder_history(self):
+        return self.data['folder_history']
+
+    def get_folder_favorites(self):
+        return self.data['folder_favorites']
+
+    def get_text_history(self):
+        return self.data['text_history']
+
+    def get_text_favorites(self):
+        return self.data['text_favorites']
+
+    def get_file_history(self):
+        return self.data['file_history']
+
+    def get_file_favorites(self):
+        return self.data['file_favorites']
 
 
 class CompareToolApp:
@@ -23,6 +185,12 @@ class CompareToolApp:
         self.root = root
         self.root.title("파일/폴더 비교 도구")
         self.root.geometry("1200x800")
+
+        # 데이터 매니저 초기화
+        self.data_manager = DataManager()
+
+        # 메뉴바 생성
+        self.create_menubar()
 
         # 탭 생성
         self.notebook = ttk.Notebook(root)
@@ -42,6 +210,25 @@ class CompareToolApp:
         self.setup_text_compare_tab()
         self.setup_file_compare_tab()
 
+    def create_menubar(self):
+        """메뉴바 생성"""
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+
+        # 히스토리 메뉴
+        history_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="히스토리", menu=history_menu)
+        history_menu.add_command(label="폴더 비교 히스토리", command=lambda: self.show_history_manager('folder'))
+        history_menu.add_command(label="파일 비교 히스토리", command=lambda: self.show_history_manager('file'))
+        history_menu.add_command(label="텍스트 비교 히스토리", command=lambda: self.show_history_manager('text'))
+
+        # 즐겨찾기 메뉴
+        favorite_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="즐겨찾기", menu=favorite_menu)
+        favorite_menu.add_command(label="폴더 비교 즐겨찾기", command=lambda: self.show_favorite_manager('folder'))
+        favorite_menu.add_command(label="파일 비교 즐겨찾기", command=lambda: self.show_favorite_manager('file'))
+        favorite_menu.add_command(label="텍스트 비교 즐겨찾기", command=lambda: self.show_favorite_manager('text'))
+
     def setup_folder_compare_tab(self):
         """첫 번째 모드: 폴더 비교"""
         frame = self.folder_compare_tab
@@ -50,21 +237,32 @@ class CompareToolApp:
         control_frame = ttk.Frame(frame)
         control_frame.pack(fill='x', padx=10, pady=10)
 
+        # 히스토리 및 즐겨찾기 버튼
+        history_fav_frame = ttk.Frame(control_frame)
+        history_fav_frame.grid(row=0, column=0, columnspan=3, sticky='w', pady=5)
+
+        ttk.Button(history_fav_frame, text="📜 히스토리에서 불러오기",
+                  command=lambda: self.load_from_history('folder')).pack(side='left', padx=5)
+        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에서 불러오기",
+                  command=lambda: self.load_from_favorite('folder')).pack(side='left', padx=5)
+        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에 추가",
+                  command=lambda: self.add_to_favorite('folder')).pack(side='left', padx=5)
+
         # 왼쪽 폴더 선택
-        ttk.Label(control_frame, text="왼쪽 폴더:").grid(row=0, column=0, sticky='w', padx=5, pady=5)
+        ttk.Label(control_frame, text="왼쪽 폴더:").grid(row=1, column=0, sticky='w', padx=5, pady=5)
         self.left_folder_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.left_folder_var, width=50).grid(row=0, column=1, padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_folder(self.left_folder_var)).grid(row=0, column=2, padx=5, pady=5)
+        ttk.Entry(control_frame, textvariable=self.left_folder_var, width=50).grid(row=1, column=1, padx=5, pady=5)
+        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_folder(self.left_folder_var)).grid(row=1, column=2, padx=5, pady=5)
 
         # 오른쪽 폴더 선택
-        ttk.Label(control_frame, text="오른쪽 폴더:").grid(row=1, column=0, sticky='w', padx=5, pady=5)
+        ttk.Label(control_frame, text="오른쪽 폴더:").grid(row=2, column=0, sticky='w', padx=5, pady=5)
         self.right_folder_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.right_folder_var, width=50).grid(row=1, column=1, padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_folder(self.right_folder_var)).grid(row=1, column=2, padx=5, pady=5)
+        ttk.Entry(control_frame, textvariable=self.right_folder_var, width=50).grid(row=2, column=1, padx=5, pady=5)
+        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_folder(self.right_folder_var)).grid(row=2, column=2, padx=5, pady=5)
 
         # 비교 옵션
         option_frame = ttk.Frame(control_frame)
-        option_frame.grid(row=2, column=0, columnspan=3, pady=10)
+        option_frame.grid(row=3, column=0, columnspan=3, pady=10)
 
         self.compare_method_var = tk.StringVar(value="md5")
         ttk.Radiobutton(option_frame, text="MD5 비교", variable=self.compare_method_var, value="md5").pack(side='left', padx=10)
@@ -128,10 +326,25 @@ class CompareToolApp:
         control_frame = ttk.Frame(frame)
         control_frame.pack(fill='x', padx=10, pady=10)
 
-        ttk.Button(control_frame, text="비교하기", command=self.compare_text).pack(side='left', padx=5)
-        ttk.Button(control_frame, text="왼쪽으로 적용", command=lambda: self.apply_text('to_left')).pack(side='left', padx=5)
-        ttk.Button(control_frame, text="오른쪽으로 적용", command=lambda: self.apply_text('to_right')).pack(side='left', padx=5)
-        ttk.Button(control_frame, text="초기화", command=self.clear_text_comparison).pack(side='left', padx=5)
+        # 히스토리 및 즐겨찾기 버튼
+        history_fav_frame = ttk.Frame(control_frame)
+        history_fav_frame.pack(fill='x', pady=5)
+
+        ttk.Button(history_fav_frame, text="📜 히스토리에서 불러오기",
+                  command=lambda: self.load_from_history('text')).pack(side='left', padx=5)
+        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에서 불러오기",
+                  command=lambda: self.load_from_favorite('text')).pack(side='left', padx=5)
+        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에 추가",
+                  command=lambda: self.add_to_favorite('text')).pack(side='left', padx=5)
+
+        # 비교 버튼
+        button_frame = ttk.Frame(control_frame)
+        button_frame.pack(fill='x', pady=5)
+
+        ttk.Button(button_frame, text="비교하기", command=self.compare_text).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="왼쪽으로 적용", command=lambda: self.apply_text('to_left')).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="오른쪽으로 적용", command=lambda: self.apply_text('to_right')).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="초기화", command=self.clear_text_comparison).pack(side='left', padx=5)
 
         # 텍스트 입력 영역
         text_frame = ttk.Frame(frame)
@@ -163,21 +376,32 @@ class CompareToolApp:
         control_frame = ttk.Frame(frame)
         control_frame.pack(fill='x', padx=10, pady=10)
 
+        # 히스토리 및 즐겨찾기 버튼
+        history_fav_frame = ttk.Frame(control_frame)
+        history_fav_frame.grid(row=0, column=0, columnspan=3, sticky='w', pady=5)
+
+        ttk.Button(history_fav_frame, text="📜 히스토리에서 불러오기",
+                  command=lambda: self.load_from_history('file')).pack(side='left', padx=5)
+        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에서 불러오기",
+                  command=lambda: self.load_from_favorite('file')).pack(side='left', padx=5)
+        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에 추가",
+                  command=lambda: self.add_to_favorite('file')).pack(side='left', padx=5)
+
         # 왼쪽 파일 선택
-        ttk.Label(control_frame, text="왼쪽 파일:").grid(row=0, column=0, sticky='w', padx=5, pady=5)
+        ttk.Label(control_frame, text="왼쪽 파일:").grid(row=1, column=0, sticky='w', padx=5, pady=5)
         self.file_left_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.file_left_var, width=50).grid(row=0, column=1, padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_file(self.file_left_var)).grid(row=0, column=2, padx=5, pady=5)
+        ttk.Entry(control_frame, textvariable=self.file_left_var, width=50).grid(row=1, column=1, padx=5, pady=5)
+        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_file(self.file_left_var)).grid(row=1, column=2, padx=5, pady=5)
 
         # 오른쪽 파일 선택
-        ttk.Label(control_frame, text="오른쪽 파일:").grid(row=1, column=0, sticky='w', padx=5, pady=5)
+        ttk.Label(control_frame, text="오른쪽 파일:").grid(row=2, column=0, sticky='w', padx=5, pady=5)
         self.file_right_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.file_right_var, width=50).grid(row=1, column=1, padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_file(self.file_right_var)).grid(row=1, column=2, padx=5, pady=5)
+        ttk.Entry(control_frame, textvariable=self.file_right_var, width=50).grid(row=2, column=1, padx=5, pady=5)
+        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_file(self.file_right_var)).grid(row=2, column=2, padx=5, pady=5)
 
         # 버튼
         button_frame = ttk.Frame(control_frame)
-        button_frame.grid(row=2, column=0, columnspan=3, pady=10)
+        button_frame.grid(row=3, column=0, columnspan=3, pady=10)
         ttk.Button(button_frame, text="비교하기", command=self.compare_files).pack(side='left', padx=5)
         ttk.Button(button_frame, text="왼쪽 파일 저장", command=lambda: self.save_file('left')).pack(side='left', padx=5)
         ttk.Button(button_frame, text="오른쪽 파일 저장", command=lambda: self.save_file('right')).pack(side='left', padx=5)
@@ -252,6 +476,9 @@ class CompareToolApp:
         if not os.path.exists(left_folder) or not os.path.exists(right_folder):
             messagebox.showerror("오류", "선택한 폴더가 존재하지 않습니다.")
             return
+
+        # 히스토리에 추가
+        self.data_manager.add_folder_history(left_folder, right_folder, self.compare_method_var.get())
 
         # 트리뷰 초기화
         for item in self.folder_tree.get_children():
@@ -423,6 +650,10 @@ class CompareToolApp:
         left_text = self.text_left.get('1.0', 'end-1c')
         right_text = self.text_right.get('1.0', 'end-1c')
 
+        # 히스토리에 추가
+        if left_text or right_text:
+            self.data_manager.add_text_history(left_text, right_text)
+
         left_lines = left_text.splitlines()
         right_lines = right_text.splitlines()
 
@@ -481,6 +712,9 @@ class CompareToolApp:
         if not os.path.exists(left_file) or not os.path.exists(right_file):
             messagebox.showerror("오류", "선택한 파일이 존재하지 않습니다.")
             return
+
+        # 히스토리에 추가
+        self.data_manager.add_file_history(left_file, right_file)
 
         try:
             # 파일 읽기
@@ -543,6 +777,249 @@ class CompareToolApp:
             messagebox.showinfo("완료", "파일이 저장되었습니다.")
         except Exception as e:
             messagebox.showerror("오류", f"파일 저장 실패:\n{str(e)}")
+
+    # 히스토리 및 즐겨찾기 관련 메서드
+    def load_from_history(self, category):
+        """히스토리에서 불러오기"""
+        if category == 'folder':
+            history = self.data_manager.get_folder_history()
+        elif category == 'file':
+            history = self.data_manager.get_file_history()
+        else:
+            history = self.data_manager.get_text_history()
+
+        if not history:
+            messagebox.showinfo("알림", "히스토리가 비어있습니다.")
+            return
+
+        # 선택 창 열기
+        self.show_selection_window(category, 'history', history)
+
+    def load_from_favorite(self, category):
+        """즐겨찾기에서 불러오기"""
+        if category == 'folder':
+            favorites = self.data_manager.get_folder_favorites()
+        elif category == 'file':
+            favorites = self.data_manager.get_file_favorites()
+        else:
+            favorites = self.data_manager.get_text_favorites()
+
+        if not favorites:
+            messagebox.showinfo("알림", "즐겨찾기가 비어있습니다.")
+            return
+
+        # 선택 창 열기
+        self.show_selection_window(category, 'favorite', favorites)
+
+    def show_selection_window(self, category, data_type, items):
+        """선택 창 표시"""
+        win = tk.Toplevel(self.root)
+        win.title(f"{'히스토리' if data_type == 'history' else '즐겨찾기'} 선택")
+        win.geometry("600x400")
+
+        # 리스트박스
+        frame = ttk.Frame(win)
+        frame.pack(fill='both', expand=True, padx=10, pady=10)
+
+        scrollbar = ttk.Scrollbar(frame, orient='vertical')
+        scrollbar.pack(side='right', fill='y')
+
+        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=('', 10))
+        listbox.pack(fill='both', expand=True)
+        scrollbar.config(command=listbox.yview)
+
+        # 항목 추가
+        for item in items:
+            if category == 'folder':
+                if data_type == 'favorite':
+                    display = f"{item['name']}: {item['left']} ↔ {item['right']}"
+                else:
+                    display = f"[{item['timestamp']}] {item['left']} ↔ {item['right']}"
+            elif category == 'file':
+                if data_type == 'favorite':
+                    display = f"{item['name']}: {item['left']} ↔ {item['right']}"
+                else:
+                    display = f"[{item['timestamp']}] {item['left']} ↔ {item['right']}"
+            else:  # text
+                if data_type == 'favorite':
+                    display = f"{item['name']}: {item['left_preview']} | {item['right_preview']}"
+                else:
+                    display = f"[{item['timestamp']}] {item['left_preview']} | {item['right_preview']}"
+            listbox.insert('end', display)
+
+        # 버튼
+        button_frame = ttk.Frame(win)
+        button_frame.pack(fill='x', padx=10, pady=10)
+
+        def load_selected():
+            selection = listbox.curselection()
+            if not selection:
+                messagebox.showwarning("경고", "항목을 선택해주세요.")
+                return
+
+            index = selection[0]
+            item = items[index]
+
+            if category == 'folder':
+                self.left_folder_var.set(item['left'])
+                self.right_folder_var.set(item['right'])
+                if 'method' in item:
+                    self.compare_method_var.set(item['method'])
+            elif category == 'file':
+                self.file_left_var.set(item['left'])
+                self.file_right_var.set(item['right'])
+            else:  # text
+                self.text_left.delete('1.0', 'end')
+                self.text_right.delete('1.0', 'end')
+                self.text_left.insert('1.0', item['left_text'])
+                self.text_right.insert('1.0', item['right_text'])
+
+            win.destroy()
+            messagebox.showinfo("완료", "불러오기 완료!")
+
+        ttk.Button(button_frame, text="불러오기", command=load_selected).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="취소", command=win.destroy).pack(side='left', padx=5)
+
+    def add_to_favorite(self, category):
+        """즐겨찾기에 추가"""
+        name = simpledialog.askstring("즐겨찾기 추가", "즐겨찾기 이름을 입력하세요:")
+        if not name:
+            return
+
+        if category == 'folder':
+            left = self.left_folder_var.get()
+            right = self.right_folder_var.get()
+            if not left or not right:
+                messagebox.showwarning("경고", "폴더를 선택해주세요.")
+                return
+            self.data_manager.add_folder_favorite(name, left, right, self.compare_method_var.get())
+        elif category == 'file':
+            left = self.file_left_var.get()
+            right = self.file_right_var.get()
+            if not left or not right:
+                messagebox.showwarning("경고", "파일을 선택해주세요.")
+                return
+            self.data_manager.add_file_favorite(name, left, right)
+        else:  # text
+            left_text = self.text_left.get('1.0', 'end-1c')
+            right_text = self.text_right.get('1.0', 'end-1c')
+            if not left_text and not right_text:
+                messagebox.showwarning("경고", "텍스트를 입력해주세요.")
+                return
+            self.data_manager.add_text_favorite(name, left_text, right_text)
+
+        messagebox.showinfo("완료", "즐겨찾기에 추가되었습니다.")
+
+    def show_history_manager(self, category):
+        """히스토리 관리 창"""
+        if category == 'folder':
+            items = self.data_manager.get_folder_history()
+            title = "폴더 비교 히스토리"
+        elif category == 'file':
+            items = self.data_manager.get_file_history()
+            title = "파일 비교 히스토리"
+        else:
+            items = self.data_manager.get_text_history()
+            title = "텍스트 비교 히스토리"
+
+        self.show_manager_window(category, 'history', items, title)
+
+    def show_favorite_manager(self, category):
+        """즐겨찾기 관리 창"""
+        if category == 'folder':
+            items = self.data_manager.get_folder_favorites()
+            title = "폴더 비교 즐겨찾기"
+        elif category == 'file':
+            items = self.data_manager.get_file_favorites()
+            title = "파일 비교 즐겨찾기"
+        else:
+            items = self.data_manager.get_text_favorites()
+            title = "텍스트 비교 즐겨찾기"
+
+        self.show_manager_window(category, 'favorite', items, title)
+
+    def show_manager_window(self, category, data_type, items, title):
+        """관리 창 표시"""
+        win = tk.Toplevel(self.root)
+        win.title(title)
+        win.geometry("800x500")
+
+        # 리스트박스
+        frame = ttk.Frame(win)
+        frame.pack(fill='both', expand=True, padx=10, pady=10)
+
+        scrollbar = ttk.Scrollbar(frame, orient='vertical')
+        scrollbar.pack(side='right', fill='y')
+
+        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=('', 9))
+        listbox.pack(fill='both', expand=True)
+        scrollbar.config(command=listbox.yview)
+
+        def refresh_list():
+            listbox.delete(0, 'end')
+            current_items = items if data_type == 'history' else \
+                           (self.data_manager.get_folder_favorites() if category == 'folder' else \
+                            self.data_manager.get_file_favorites() if category == 'file' else \
+                            self.data_manager.get_text_favorites())
+
+            for item in current_items:
+                if category == 'folder':
+                    if data_type == 'favorite':
+                        display = f"{item['name']}: {item['left']} ↔ {item['right']} [{item['method']}]"
+                    else:
+                        display = f"[{item['timestamp']}] {item['left']} ↔ {item['right']} [{item['method']}]"
+                elif category == 'file':
+                    if data_type == 'favorite':
+                        display = f"{item['name']}: {item['left']} ↔ {item['right']}"
+                    else:
+                        display = f"[{item['timestamp']}] {item['left']} ↔ {item['right']}"
+                else:  # text
+                    if data_type == 'favorite':
+                        display = f"{item['name']}: {item['left_preview']} | {item['right_preview']}"
+                    else:
+                        display = f"[{item['timestamp']}] {item['left_preview']} | {item['right_preview']}"
+                listbox.insert('end', display)
+
+        refresh_list()
+
+        # 버튼
+        button_frame = ttk.Frame(win)
+        button_frame.pack(fill='x', padx=10, pady=10)
+
+        def delete_item():
+            selection = listbox.curselection()
+            if not selection:
+                messagebox.showwarning("경고", "삭제할 항목을 선택해주세요.")
+                return
+
+            if messagebox.askyesno("확인", "선택한 항목을 삭제하시겠습니까?"):
+                index = selection[0]
+                if data_type == 'history':
+                    self.data_manager.delete_history(category, index)
+                else:
+                    self.data_manager.delete_favorite(category, index)
+                refresh_list()
+
+        def rename_item():
+            if data_type == 'history':
+                messagebox.showinfo("알림", "히스토리는 이름을 변경할 수 없습니다.")
+                return
+
+            selection = listbox.curselection()
+            if not selection:
+                messagebox.showwarning("경고", "이름을 변경할 항목을 선택해주세요.")
+                return
+
+            new_name = simpledialog.askstring("이름 변경", "새 이름을 입력하세요:")
+            if new_name:
+                index = selection[0]
+                self.data_manager.rename_favorite(category, index, new_name)
+                refresh_list()
+
+        ttk.Button(button_frame, text="삭제", command=delete_item).pack(side='left', padx=5)
+        if data_type == 'favorite':
+            ttk.Button(button_frame, text="이름 변경", command=rename_item).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="닫기", command=win.destroy).pack(side='left', padx=5)
 
 
 def main():
