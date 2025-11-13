@@ -75,7 +75,7 @@ if __name__ == '__main__':
         # 샘플 위젯들
         ttk.Label(root, text="📂 파일/폴더 비교 도구", font=("Segoe UI", 16, "bold")).pack(pady=20)
 
-        frame = ttk.LabelFrame(root, text="샘플 컨트롤", padding=20)
+        frame = ttk.Labelframe(root, text="샘플 컨트롤", padding=20)
         frame.pack(fill='both', expand=True, padx=20, pady=10)
 
         ttk.Label(frame, text=f"현재 적용된 테마: {default_theme}").pack(pady=5)
