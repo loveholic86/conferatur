@@ -602,7 +602,9 @@ class CompareToolApp:
                                                     insertbackground=self.colors['primary'])
         self.text_right.pack(fill='both', expand=True)
 
-        # ScrolledText는 기본적으로 복사/붙여넣기가 작동함 (별도 바인딩 불필요)
+        # 복사/붙여넣기 기능 활성화
+        self.enable_clipboard_operations(self.text_left)
+        self.enable_clipboard_operations(self.text_right)
 
         # 차이점 표시 - Bootstrap Warning Alert 스타일
         self.text_left.tag_config('diff',
@@ -694,10 +696,86 @@ class CompareToolApp:
                                         foreground=self.colors['danger'],
                                         font=('Consolas', 11, 'bold'))
 
+        # 복사/붙여넣기 기능 활성화
+        self.enable_clipboard_operations(self.file_text_left)
+        self.enable_clipboard_operations(self.file_text_right)
+
         # 스크롤 동기화
         self.setup_scroll_sync(self.file_text_left, self.file_text_right)
 
     # 유틸리티 메서드
+    def enable_clipboard_operations(self, widget):
+        """텍스트 위젯에 클립보드 작업 바인딩 추가"""
+        def copy(event=None):
+            """복사"""
+            try:
+                text = widget.get('sel.first', 'sel.last')
+                widget.clipboard_clear()
+                widget.clipboard_append(text)
+            except tk.TclError:
+                pass  # 선택된 텍스트가 없음
+            return 'break'
+
+        def cut(event=None):
+            """잘라내기"""
+            try:
+                text = widget.get('sel.first', 'sel.last')
+                widget.clipboard_clear()
+                widget.clipboard_append(text)
+                widget.delete('sel.first', 'sel.last')
+            except tk.TclError:
+                pass  # 선택된 텍스트가 없음
+            return 'break'
+
+        def paste(event=None):
+            """붙여넣기"""
+            try:
+                text = widget.clipboard_get()
+                # 선택된 텍스트가 있으면 먼저 삭제
+                try:
+                    widget.delete('sel.first', 'sel.last')
+                except tk.TclError:
+                    pass
+                # 현재 커서 위치에 붙여넣기
+                widget.insert('insert', text)
+            except tk.TclError:
+                pass  # 클립보드가 비어있음
+            return 'break'
+
+        def select_all(event=None):
+            """전체 선택"""
+            widget.tag_add('sel', '1.0', 'end-1c')
+            widget.mark_set('insert', '1.0')
+            widget.see('insert')
+            return 'break'
+
+        # 바인딩 추가
+        widget.bind('<Control-c>', copy)
+        widget.bind('<Control-C>', copy)
+        widget.bind('<Control-x>', cut)
+        widget.bind('<Control-X>', cut)
+        widget.bind('<Control-v>', paste)
+        widget.bind('<Control-V>', paste)
+        widget.bind('<Control-a>', select_all)
+        widget.bind('<Control-A>', select_all)
+
+        # 우클릭 메뉴 추가
+        context_menu = tk.Menu(widget, tearoff=0)
+        context_menu.add_command(label="복사 (Ctrl+C)", command=copy)
+        context_menu.add_command(label="잘라내기 (Ctrl+X)", command=cut)
+        context_menu.add_command(label="붙여넣기 (Ctrl+V)", command=paste)
+        context_menu.add_separator()
+        context_menu.add_command(label="전체 선택 (Ctrl+A)", command=select_all)
+
+        def show_context_menu(event):
+            """우클릭 메뉴 표시"""
+            try:
+                context_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                context_menu.grab_release()
+
+        widget.bind('<Button-3>', show_context_menu)
+
     def setup_scroll_sync(self, widget1, widget2):
         """두 텍스트 위젯의 스크롤 동기화"""
         def on_scroll(*args):
