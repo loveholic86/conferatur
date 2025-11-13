@@ -705,76 +705,95 @@ class CompareToolApp:
 
     # 유틸리티 메서드
     def enable_clipboard_operations(self, widget):
-        """텍스트 위젯에 클립보드 작업 바인딩 추가"""
-        def copy(event=None):
-            """복사"""
-            try:
-                text = widget.get('sel.first', 'sel.last')
-                widget.clipboard_clear()
-                widget.clipboard_append(text)
-            except tk.TclError:
-                pass  # 선택된 텍스트가 없음
-            return 'break'
+        """텍스트 위젯에 클립보드 작업 활성화"""
 
-        def cut(event=None):
-            """잘라내기"""
+        # 복사 함수 - 가상 이벤트 사용
+        def do_copy(event=None):
             try:
-                text = widget.get('sel.first', 'sel.last')
-                widget.clipboard_clear()
-                widget.clipboard_append(text)
-                widget.delete('sel.first', 'sel.last')
-            except tk.TclError:
-                pass  # 선택된 텍스트가 없음
-            return 'break'
-
-        def paste(event=None):
-            """붙여넣기"""
-            try:
-                text = widget.clipboard_get()
-                # 선택된 텍스트가 있으면 먼저 삭제
+                widget.event_generate("<<Copy>>")
+            except:
+                # 대체 구현
                 try:
-                    widget.delete('sel.first', 'sel.last')
-                except tk.TclError:
+                    if widget.tag_ranges('sel'):
+                        widget.clipboard_clear()
+                        text = widget.get('sel.first', 'sel.last')
+                        widget.clipboard_append(text)
+                except:
                     pass
-                # 현재 커서 위치에 붙여넣기
-                widget.insert('insert', text)
-            except tk.TclError:
-                pass  # 클립보드가 비어있음
-            return 'break'
+            return "break"
 
-        def select_all(event=None):
-            """전체 선택"""
-            widget.tag_add('sel', '1.0', 'end-1c')
-            widget.mark_set('insert', '1.0')
+        # 잘라내기 함수 - 가상 이벤트 사용
+        def do_cut(event=None):
+            try:
+                widget.event_generate("<<Cut>>")
+            except:
+                # 대체 구현
+                try:
+                    if widget.tag_ranges('sel'):
+                        widget.clipboard_clear()
+                        text = widget.get('sel.first', 'sel.last')
+                        widget.clipboard_append(text)
+                        widget.delete('sel.first', 'sel.last')
+                except:
+                    pass
+            return "break"
+
+        # 붙여넣기 함수 - 가상 이벤트 사용
+        def do_paste(event=None):
+            try:
+                widget.event_generate("<<Paste>>")
+            except:
+                # 대체 구현
+                try:
+                    # 선택 영역이 있으면 삭제
+                    if widget.tag_ranges('sel'):
+                        widget.delete('sel.first', 'sel.last')
+                    # 클립보드에서 가져와서 삽입
+                    text = widget.clipboard_get()
+                    widget.insert('insert', text)
+                except:
+                    pass
+            return "break"
+
+        # 전체 선택
+        def do_select_all(event=None):
+            widget.tag_add('sel', "1.0", "end-1c")
+            widget.mark_set('insert', "1.0")
             widget.see('insert')
             return 'break'
 
-        # 바인딩 추가
-        widget.bind('<Control-c>', copy)
-        widget.bind('<Control-C>', copy)
-        widget.bind('<Control-x>', cut)
-        widget.bind('<Control-X>', cut)
-        widget.bind('<Control-v>', paste)
-        widget.bind('<Control-V>', paste)
-        widget.bind('<Control-a>', select_all)
-        widget.bind('<Control-A>', select_all)
+        # 키 바인딩 설정 (add='+' 로 기존 바인딩 유지)
+        widget.bind('<Control-c>', do_copy, add='+')
+        widget.bind('<Control-x>', do_cut, add='+')
+        widget.bind('<Control-v>', do_paste, add='+')
+        widget.bind('<Control-a>', do_select_all, add='+')
 
-        # 우클릭 메뉴 추가
+        # 대체 키 바인딩
+        widget.bind('<Control-Insert>', do_copy, add='+')
+        widget.bind('<Shift-Delete>', do_cut, add='+')
+        widget.bind('<Shift-Insert>', do_paste, add='+')
+
+        # 우클릭 컨텍스트 메뉴
         context_menu = tk.Menu(widget, tearoff=0)
-        context_menu.add_command(label="복사 (Ctrl+C)", command=copy)
-        context_menu.add_command(label="잘라내기 (Ctrl+X)", command=cut)
-        context_menu.add_command(label="붙여넣기 (Ctrl+V)", command=paste)
-        context_menu.add_separator()
-        context_menu.add_command(label="전체 선택 (Ctrl+A)", command=select_all)
 
         def show_context_menu(event):
-            """우클릭 메뉴 표시"""
+            """우클릭 시 컨텍스트 메뉴 표시"""
+            context_menu.delete(0, tk.END)  # 기존 메뉴 항목 제거
+
+            # 메뉴 항목 추가
+            context_menu.add_command(label="복사 (Ctrl+C)", command=do_copy)
+            context_menu.add_command(label="잘라내기 (Ctrl+X)", command=do_cut)
+            context_menu.add_command(label="붙여넣기 (Ctrl+V)", command=do_paste)
+            context_menu.add_separator()
+            context_menu.add_command(label="전체 선택 (Ctrl+A)", command=do_select_all)
+
+            # 메뉴 표시
             try:
-                context_menu.tk_popup(event.x_root, event.y_root)
+                context_menu.tk_popup(event.x_root, event.y_root, 0)
             finally:
                 context_menu.grab_release()
 
-        widget.bind('<Button-3>', show_context_menu)
+        widget.bind('<Button-3>', show_context_menu, add='+')
 
     def setup_scroll_sync(self, widget1, widget2):
         """두 텍스트 위젯의 스크롤 동기화"""
