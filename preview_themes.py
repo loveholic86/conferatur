@@ -70,21 +70,21 @@ if __name__ == '__main__':
             default_theme = "default"
 
         root.title(f"ttkbootstrap 미리보기 - {default_theme}")
-        root.geometry("600x450")
+        root.geometry("600x550")
 
         # 샘플 위젯들
-        ttk.Label(root, text="📂 파일/폴더 비교 도구", font=("Segoe UI", 16, "bold")).pack(pady=20)
+        ttk.Label(root, text="📂 파일/폴더 비교 도구", font=("Segoe UI", 16, "bold")).pack(pady=10)
 
-        frame = ttk.Labelframe(root, text="샘플 컨트롤", padding=20)
-        frame.pack(fill='both', expand=True, padx=20, pady=10)
+        frame = ttk.Labelframe(root, text="샘플 컨트롤", padding=15)
+        frame.pack(fill='x', padx=20, pady=10)
 
         ttk.Label(frame, text=f"현재 적용된 테마: {default_theme}").pack(pady=5)
 
-        ttk.Button(frame, text="Primary 버튼", bootstyle="primary").pack(pady=5, fill='x')
-        ttk.Button(frame, text="Success 버튼", bootstyle="success").pack(pady=5, fill='x')
-        ttk.Button(frame, text="Info 버튼", bootstyle="info").pack(pady=5, fill='x')
-        ttk.Button(frame, text="Warning 버튼", bootstyle="warning").pack(pady=5, fill='x')
-        ttk.Button(frame, text="Danger 버튼", bootstyle="danger").pack(pady=5, fill='x')
+        ttk.Button(frame, text="Primary 버튼", bootstyle="primary").pack(pady=3, fill='x')
+        ttk.Button(frame, text="Success 버튼", bootstyle="success").pack(pady=3, fill='x')
+        ttk.Button(frame, text="Info 버튼", bootstyle="info").pack(pady=3, fill='x')
+        ttk.Button(frame, text="Warning 버튼", bootstyle="warning").pack(pady=3, fill='x')
+        ttk.Button(frame, text="Danger 버튼", bootstyle="danger").pack(pady=3, fill='x')
 
         entry = ttk.Entry(frame)
         entry.pack(pady=5, fill='x')
