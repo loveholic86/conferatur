@@ -270,6 +270,7 @@ class CompareToolApp:
         ttk.Radiobutton(option_frame, text="MD5 + 날짜", variable=self.compare_method_var, value="both").pack(side='left', padx=10)
 
         ttk.Button(option_frame, text="비교 시작", command=self.compare_folders).pack(side='left', padx=20)
+        ttk.Button(option_frame, text="초기화", command=self.clear_folder_comparison).pack(side='left', padx=5)
 
         # 결과 영역
         result_frame = ttk.Frame(frame)
@@ -395,17 +396,30 @@ class CompareToolApp:
         self.text_right = scrolledtext.ScrolledText(right_frame, wrap='word', width=40, height=30)
         self.text_right.pack(fill='both', expand=True)
 
-        # 붙여넣기 바인딩 추가 (명시적으로 붙여넣기 기능 활성화)
-        def enable_paste(widget):
-            """붙여넣기 기능 활성화"""
-            # Ctrl+V 붙여넣기
+        # 복사/붙여넣기 바인딩 추가 (명시적으로 복사/붙여넣기 기능 활성화)
+        def enable_copy_paste(widget):
+            """복사/붙여넣기 기능 활성화"""
+            # 붙여넣기
             widget.bind('<Control-v>', lambda e: widget.event_generate('<<Paste>>'))
             widget.bind('<Control-V>', lambda e: widget.event_generate('<<Paste>>'))
-            # Shift+Insert 붙여넣기
             widget.bind('<Shift-Insert>', lambda e: widget.event_generate('<<Paste>>'))
 
-        enable_paste(self.text_left)
-        enable_paste(self.text_right)
+            # 복사
+            widget.bind('<Control-c>', lambda e: widget.event_generate('<<Copy>>'))
+            widget.bind('<Control-C>', lambda e: widget.event_generate('<<Copy>>'))
+            widget.bind('<Control-Insert>', lambda e: widget.event_generate('<<Copy>>'))
+
+            # 잘라내기
+            widget.bind('<Control-x>', lambda e: widget.event_generate('<<Cut>>'))
+            widget.bind('<Control-X>', lambda e: widget.event_generate('<<Cut>>'))
+            widget.bind('<Shift-Delete>', lambda e: widget.event_generate('<<Cut>>'))
+
+            # 전체 선택
+            widget.bind('<Control-a>', lambda e: widget.tag_add('sel', '1.0', 'end'))
+            widget.bind('<Control-A>', lambda e: widget.tag_add('sel', '1.0', 'end'))
+
+        enable_copy_paste(self.text_left)
+        enable_copy_paste(self.text_right)
 
         # 차이점 표시를 위한 태그 설정
         self.text_left.tag_config('diff', background='#ffcccc')
@@ -451,6 +465,7 @@ class CompareToolApp:
         ttk.Button(button_frame, text="비교하기", command=self.compare_files).pack(side='left', padx=5)
         ttk.Button(button_frame, text="왼쪽 파일 저장", command=lambda: self.save_file('left')).pack(side='left', padx=5)
         ttk.Button(button_frame, text="오른쪽 파일 저장", command=lambda: self.save_file('right')).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="초기화", command=self.clear_file_comparison).pack(side='left', padx=5)
 
         # 파일 내용 표시 영역
         file_text_frame = ttk.Frame(frame)
@@ -523,6 +538,21 @@ class CompareToolApp:
         # ScrolledText의 내부 스크롤바에 접근하여 command 재설정
         widget1.vbar.config(command=on_scrollbar)
         widget2.vbar.config(command=on_scrollbar)
+
+    def get_tree_item_path(self, item):
+        """트리 아이템의 전체 경로를 가져오기"""
+        path_parts = []
+        current = item
+
+        while current:
+            text = self.folder_tree.item(current, 'text')
+            # 폴더 아이콘 제거
+            if text.startswith("📁 "):
+                text = text[2:]
+            path_parts.insert(0, text)
+            current = self.folder_tree.parent(current)
+
+        return os.path.join(*path_parts) if path_parts else ""
 
     def browse_folder(self, var):
         """폴더 선택 대화상자"""
@@ -600,7 +630,9 @@ class CompareToolApp:
         # 모든 파일 경로 합치기
         all_paths = set(left_files.keys()) | set(right_files.keys())
 
-        differences = []
+        # 트리 구조를 위한 딕셔너리 (폴더 경로 -> 트리 아이템 ID)
+        folder_nodes = {}
+        diff_count = 0
 
         for rel_path in sorted(all_paths):
             left_path = left_files.get(rel_path)
@@ -652,15 +684,45 @@ class CompareToolApp:
 
             # 차이가 있는 파일만 표시
             if status != "동일":
+                diff_count += 1
                 left_size = left_info['size'] if left_info else ""
                 left_mtime = left_info['mtime'] if left_info else ""
                 right_size = right_info['size'] if right_info else ""
                 right_mtime = right_info['mtime'] if right_info else ""
 
-                self.folder_tree.insert('', 'end', text=rel_path,
-                                        values=(status, left_size, left_mtime, right_size, right_mtime))
+                # 경로를 분리하여 트리 구조 생성
+                path_parts = rel_path.split(os.sep)
 
-        messagebox.showinfo("완료", f"비교가 완료되었습니다.\n차이가 있는 파일: {len(self.folder_tree.get_children())}개")
+                # 폴더가 있는 경우 폴더 노드 생성
+                if len(path_parts) > 1:
+                    parent_id = ''
+                    cumulative_path = ''
+
+                    # 폴더 경로 생성
+                    for i, part in enumerate(path_parts[:-1]):
+                        if cumulative_path:
+                            cumulative_path = os.path.join(cumulative_path, part)
+                        else:
+                            cumulative_path = part
+
+                        # 폴더 노드가 없으면 생성
+                        if cumulative_path not in folder_nodes:
+                            folder_nodes[cumulative_path] = self.folder_tree.insert(
+                                parent_id, 'end', text=f"📁 {part}",
+                                values=('', '', '', '', ''), open=True
+                            )
+                        parent_id = folder_nodes[cumulative_path]
+
+                    # 파일을 폴더 노드 아래에 추가
+                    file_name = path_parts[-1]
+                    self.folder_tree.insert(parent_id, 'end', text=file_name,
+                                            values=(status, left_size, left_mtime, right_size, right_mtime))
+                else:
+                    # 루트에 있는 파일
+                    self.folder_tree.insert('', 'end', text=rel_path,
+                                            values=(status, left_size, left_mtime, right_size, right_mtime))
+
+        messagebox.showinfo("완료", f"비교가 완료되었습니다.\n차이가 있는 파일: {diff_count}개")
 
     def copy_file(self, direction):
         """파일 복사"""
@@ -676,7 +738,12 @@ class CompareToolApp:
         error_count = 0
 
         for item in selected:
-            rel_path = self.folder_tree.item(item, 'text')
+            # 폴더 노드는 스킵
+            item_values = self.folder_tree.item(item, 'values')
+            if not item_values or not item_values[0]:  # 상태가 없으면 폴더
+                continue
+
+            rel_path = self.get_tree_item_path(item)
             left_path = os.path.join(left_folder, rel_path)
             right_path = os.path.join(right_folder, rel_path)
 
@@ -707,7 +774,18 @@ class CompareToolApp:
             messagebox.showwarning("경고", "삭제할 파일을 선택해주세요.")
             return
 
-        if not messagebox.askyesno("확인", f"{len(selected)}개 파일을 삭제하시겠습니까?"):
+        # 파일만 카운트
+        file_count = 0
+        for item in selected:
+            item_values = self.folder_tree.item(item, 'values')
+            if item_values and item_values[0]:  # 상태가 있으면 파일
+                file_count += 1
+
+        if file_count == 0:
+            messagebox.showwarning("경고", "삭제할 파일을 선택해주세요. (폴더는 선택할 수 없습니다)")
+            return
+
+        if not messagebox.askyesno("확인", f"{file_count}개 파일을 삭제하시겠습니까?"):
             return
 
         left_folder = self.left_folder_var.get()
@@ -716,7 +794,12 @@ class CompareToolApp:
         deleted_count = 0
 
         for item in selected:
-            rel_path = self.folder_tree.item(item, 'text')
+            # 폴더 노드는 스킵
+            item_values = self.folder_tree.item(item, 'values')
+            if not item_values or not item_values[0]:  # 상태가 없으면 폴더
+                continue
+
+            rel_path = self.get_tree_item_path(item)
             left_path = os.path.join(left_folder, rel_path)
             right_path = os.path.join(right_folder, rel_path)
 
@@ -742,7 +825,13 @@ class CompareToolApp:
 
         # 첫 번째 선택 항목만 처리
         item = selected[0]
-        rel_path = self.folder_tree.item(item, 'text')
+
+        # 폴더 노드인 경우 미리보기 표시 안 함
+        item_values = self.folder_tree.item(item, 'values')
+        if not item_values or not item_values[0]:  # 상태가 없으면 폴더
+            return
+
+        rel_path = self.get_tree_item_path(item)
 
         left_folder = self.left_folder_var.get()
         right_folder = self.right_folder_var.get()
@@ -885,6 +974,27 @@ class CompareToolApp:
         self.text_right.delete('1.0', 'end')
         self.text_left.tag_remove('diff', '1.0', 'end')
         self.text_right.tag_remove('diff', '1.0', 'end')
+
+    def clear_folder_comparison(self):
+        """폴더 비교 초기화"""
+        # 트리뷰 초기화
+        for item in self.folder_tree.get_children():
+            self.folder_tree.delete(item)
+
+        # 미리보기 영역 초기화
+        self.folder_preview_left.config(state='normal')
+        self.folder_preview_right.config(state='normal')
+        self.folder_preview_left.delete('1.0', 'end')
+        self.folder_preview_right.delete('1.0', 'end')
+        self.folder_preview_left.config(state='disabled')
+        self.folder_preview_right.config(state='disabled')
+
+    def clear_file_comparison(self):
+        """파일 비교 초기화"""
+        self.file_text_left.delete('1.0', 'end')
+        self.file_text_right.delete('1.0', 'end')
+        self.file_text_left.tag_remove('diff', '1.0', 'end')
+        self.file_text_right.tag_remove('diff', '1.0', 'end')
 
     def compare_files(self):
         """파일 내용 비교"""
