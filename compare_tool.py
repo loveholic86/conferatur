@@ -183,8 +183,33 @@ class DataManager:
 class CompareToolApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("파일/폴더 비교 도구")
-        self.root.geometry("1200x800")
+        self.root.title("📂 파일/폴더 비교 도구")
+        self.root.geometry("1300x850")
+
+        # 색상 테마 정의
+        self.colors = {
+            'bg': '#f5f6fa',
+            'fg': '#2c3e50',
+            'primary': '#3498db',
+            'success': '#27ae60',
+            'warning': '#f39c12',
+            'danger': '#e74c3c',
+            'secondary': '#95a5a6',
+            'accent': '#9b59b6',
+            'light': '#ecf0f1',
+            'dark': '#34495e',
+            'diff_bg': '#ffe6e6',
+            'diff_char': '#ffcccc',
+            'text_bg': '#ffffff',
+            'tree_even': '#f8f9fa',
+            'tree_odd': '#ffffff'
+        }
+
+        # 루트 배경색 설정
+        self.root.configure(bg=self.colors['bg'])
+
+        # 스타일 설정
+        self.setup_styles()
 
         # 데이터 매니저 초기화
         self.data_manager = DataManager()
@@ -194,21 +219,114 @@ class CompareToolApp:
 
         # 탭 생성
         self.notebook = ttk.Notebook(root)
-        self.notebook.pack(fill='both', expand=True, padx=5, pady=5)
+        self.notebook.pack(fill='both', expand=True, padx=10, pady=10)
 
         # 세 가지 모드 탭 생성
-        self.folder_compare_tab = ttk.Frame(self.notebook)
-        self.text_compare_tab = ttk.Frame(self.notebook)
-        self.file_compare_tab = ttk.Frame(self.notebook)
+        self.folder_compare_tab = ttk.Frame(self.notebook, style='Tab.TFrame')
+        self.text_compare_tab = ttk.Frame(self.notebook, style='Tab.TFrame')
+        self.file_compare_tab = ttk.Frame(self.notebook, style='Tab.TFrame')
 
-        self.notebook.add(self.folder_compare_tab, text="폴더 비교")
-        self.notebook.add(self.text_compare_tab, text="텍스트 비교")
-        self.notebook.add(self.file_compare_tab, text="파일 비교")
+        self.notebook.add(self.folder_compare_tab, text=" 📁 폴더 비교 ")
+        self.notebook.add(self.text_compare_tab, text=" 📝 텍스트 비교 ")
+        self.notebook.add(self.file_compare_tab, text=" 📄 파일 비교 ")
 
         # 각 탭 초기화
         self.setup_folder_compare_tab()
         self.setup_text_compare_tab()
         self.setup_file_compare_tab()
+
+    def setup_styles(self):
+        """ttk 스타일 설정"""
+        style = ttk.Style()
+        style.theme_use('clam')
+
+        # Frame 스타일
+        style.configure('Tab.TFrame', background=self.colors['bg'])
+
+        # Notebook 스타일
+        style.configure('TNotebook', background=self.colors['bg'], borderwidth=0)
+        style.configure('TNotebook.Tab',
+                       padding=[20, 10],
+                       font=('맑은 고딕', 11, 'bold'),
+                       background=self.colors['light'])
+        style.map('TNotebook.Tab',
+                 background=[('selected', self.colors['primary'])],
+                 foreground=[('selected', 'white')],
+                 expand=[('selected', [1, 1, 1, 0])])
+
+        # Button 스타일
+        style.configure('TButton',
+                       font=('맑은 고딕', 10),
+                       padding=[15, 8],
+                       background=self.colors['secondary'],
+                       borderwidth=0)
+        style.map('TButton',
+                 background=[('active', self.colors['dark'])],
+                 relief=[('pressed', 'flat'), ('!pressed', 'raised')])
+
+        # Primary Button
+        style.configure('Primary.TButton',
+                       font=('맑은 고딕', 10, 'bold'),
+                       padding=[15, 8],
+                       background=self.colors['primary'])
+        style.map('Primary.TButton',
+                 background=[('active', '#2980b9')])
+
+        # Success Button
+        style.configure('Success.TButton',
+                       font=('맑은 고딕', 10),
+                       padding=[15, 8],
+                       background=self.colors['success'])
+        style.map('Success.TButton',
+                 background=[('active', '#229954')])
+
+        # Danger Button
+        style.configure('Danger.TButton',
+                       font=('맑은 고딕', 10),
+                       padding=[15, 8],
+                       background=self.colors['danger'])
+        style.map('Danger.TButton',
+                 background=[('active', '#c0392b')])
+
+        # Label 스타일
+        style.configure('TLabel',
+                       background=self.colors['bg'],
+                       foreground=self.colors['fg'],
+                       font=('맑은 고딕', 10))
+
+        style.configure('Title.TLabel',
+                       background=self.colors['bg'],
+                       foreground=self.colors['dark'],
+                       font=('맑은 고딕', 12, 'bold'))
+
+        # Entry 스타일
+        style.configure('TEntry',
+                       fieldbackground=self.colors['text_bg'],
+                       font=('맑은 고딕', 10))
+
+        # Radiobutton 스타일
+        style.configure('TRadiobutton',
+                       background=self.colors['bg'],
+                       foreground=self.colors['fg'],
+                       font=('맑은 고딕', 10))
+
+        # Treeview 스타일
+        style.configure('Treeview',
+                       background=self.colors['text_bg'],
+                       fieldbackground=self.colors['text_bg'],
+                       foreground=self.colors['fg'],
+                       font=('맑은 고딕', 10),
+                       rowheight=25)
+        style.configure('Treeview.Heading',
+                       background=self.colors['dark'],
+                       foreground='white',
+                       font=('맑은 고딕', 10, 'bold'),
+                       relief='flat')
+        style.map('Treeview.Heading',
+                 background=[('active', self.colors['primary'])])
+        style.map('Treeview',
+                 background=[('selected', self.colors['primary'])],
+                 foreground=[('selected', 'white')])
 
     def create_menubar(self):
         """메뉴바 생성"""
@@ -265,12 +383,12 @@ class CompareToolApp:
         option_frame.grid(row=3, column=0, columnspan=3, pady=10)
 
         self.compare_method_var = tk.StringVar(value="md5")
-        ttk.Radiobutton(option_frame, text="MD5 비교", variable=self.compare_method_var, value="md5").pack(side='left', padx=10)
-        ttk.Radiobutton(option_frame, text="날짜 비교", variable=self.compare_method_var, value="date").pack(side='left', padx=10)
-        ttk.Radiobutton(option_frame, text="MD5 + 날짜", variable=self.compare_method_var, value="both").pack(side='left', padx=10)
+        ttk.Radiobutton(option_frame, text="🔍 MD5 비교", variable=self.compare_method_var, value="md5").pack(side='left', padx=10)
+        ttk.Radiobutton(option_frame, text="📅 날짜 비교", variable=self.compare_method_var, value="date").pack(side='left', padx=10)
+        ttk.Radiobutton(option_frame, text="🔍📅 MD5 + 날짜", variable=self.compare_method_var, value="both").pack(side='left', padx=10)
 
-        ttk.Button(option_frame, text="비교 시작", command=self.compare_folders).pack(side='left', padx=20)
-        ttk.Button(option_frame, text="초기화", command=self.clear_folder_comparison).pack(side='left', padx=5)
+        ttk.Button(option_frame, text="▶ 비교 시작", command=self.compare_folders, style='Primary.TButton').pack(side='left', padx=20)
+        ttk.Button(option_frame, text="🔄 초기화", command=self.clear_folder_comparison).pack(side='left', padx=5)
 
         # 결과 영역
         result_frame = ttk.Frame(frame)
@@ -318,9 +436,9 @@ class CompareToolApp:
         button_frame = ttk.Frame(result_frame)
         button_frame.pack(fill='x', pady=5)
 
-        ttk.Button(button_frame, text="왼쪽 → 오른쪽 복사", command=lambda: self.copy_file('left_to_right')).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="오른쪽 → 왼쪽 복사", command=lambda: self.copy_file('right_to_left')).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="선택 항목 삭제", command=self.delete_selected).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="📤 왼쪽 → 오른쪽 복사", command=lambda: self.copy_file('left_to_right'), style='Success.TButton').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="📥 오른쪽 → 왼쪽 복사", command=lambda: self.copy_file('right_to_left'), style='Success.TButton').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="🗑️ 선택 항목 삭제", command=self.delete_selected, style='Danger.TButton').pack(side='left', padx=5)
 
         # 파일 내용 미리보기 영역
         preview_label = ttk.Label(result_frame, text="파일 내용 미리보기 (파일을 선택하세요)", font=('', 10, 'bold'))
@@ -343,9 +461,15 @@ class CompareToolApp:
         self.folder_preview_right = scrolledtext.ScrolledText(right_preview_frame, wrap='word', width=40, height=15, state='disabled')
         self.folder_preview_right.pack(fill='both', expand=True)
 
+        # 텍스트 위젯 배경색 설정
+        self.folder_preview_left.config(bg=self.colors['text_bg'], fg=self.colors['fg'],
+                                       font=('Consolas', 10), relief='solid', borderwidth=1)
+        self.folder_preview_right.config(bg=self.colors['text_bg'], fg=self.colors['fg'],
+                                        font=('Consolas', 10), relief='solid', borderwidth=1)
+
         # 차이점 표시를 위한 태그 설정
-        self.folder_preview_left.tag_config('diff', background='#ffcccc')
-        self.folder_preview_right.tag_config('diff', background='#ffcccc')
+        self.folder_preview_left.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'])
+        self.folder_preview_right.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'])
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.folder_preview_left, self.folder_preview_right)
@@ -373,10 +497,10 @@ class CompareToolApp:
         button_frame = ttk.Frame(control_frame)
         button_frame.pack(fill='x', pady=5)
 
-        ttk.Button(button_frame, text="비교하기", command=self.compare_text).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="왼쪽으로 적용", command=lambda: self.apply_text('to_left')).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="오른쪽으로 적용", command=lambda: self.apply_text('to_right')).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="초기화", command=self.clear_text_comparison).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="▶ 비교하기", command=self.compare_text, style='Primary.TButton').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="📥 왼쪽으로 적용", command=lambda: self.apply_text('to_left'), style='Success.TButton').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="📤 오른쪽으로 적용", command=lambda: self.apply_text('to_right'), style='Success.TButton').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="🔄 초기화", command=self.clear_text_comparison).pack(side='left', padx=5)
 
         # 텍스트 입력 영역
         text_frame = ttk.Frame(frame)
@@ -385,15 +509,21 @@ class CompareToolApp:
         # 왼쪽 텍스트
         left_frame = ttk.Frame(text_frame)
         left_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(left_frame, text="왼쪽 텍스트", font=('', 12, 'bold')).pack()
-        self.text_left = scrolledtext.ScrolledText(left_frame, wrap='word', width=40, height=30)
+        ttk.Label(left_frame, text="📝 왼쪽 텍스트", style='Title.TLabel').pack(pady=(0, 5))
+        self.text_left = scrolledtext.ScrolledText(left_frame, wrap='word', width=40, height=30,
+                                                   bg=self.colors['text_bg'], fg=self.colors['fg'],
+                                                   font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                   insertbackground=self.colors['primary'])
         self.text_left.pack(fill='both', expand=True)
 
         # 오른쪽 텍스트
         right_frame = ttk.Frame(text_frame)
         right_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(right_frame, text="오른쪽 텍스트", font=('', 12, 'bold')).pack()
-        self.text_right = scrolledtext.ScrolledText(right_frame, wrap='word', width=40, height=30)
+        ttk.Label(right_frame, text="📝 오른쪽 텍스트", style='Title.TLabel').pack(pady=(0, 5))
+        self.text_right = scrolledtext.ScrolledText(right_frame, wrap='word', width=40, height=30,
+                                                    bg=self.colors['text_bg'], fg=self.colors['fg'],
+                                                    font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                    insertbackground=self.colors['primary'])
         self.text_right.pack(fill='both', expand=True)
 
         # 복사/붙여넣기 바인딩 추가 (명시적으로 복사/붙여넣기 기능 활성화)
@@ -422,8 +552,8 @@ class CompareToolApp:
         enable_copy_paste(self.text_right)
 
         # 차이점 표시를 위한 태그 설정
-        self.text_left.tag_config('diff', background='#ffcccc')
-        self.text_right.tag_config('diff', background='#ffcccc')
+        self.text_left.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'], font=('Consolas', 11, 'bold'))
+        self.text_right.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'], font=('Consolas', 11, 'bold'))
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.text_left, self.text_right)
@@ -462,10 +592,10 @@ class CompareToolApp:
         # 버튼
         button_frame = ttk.Frame(control_frame)
         button_frame.grid(row=3, column=0, columnspan=3, pady=10)
-        ttk.Button(button_frame, text="비교하기", command=self.compare_files).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="왼쪽 파일 저장", command=lambda: self.save_file('left')).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="오른쪽 파일 저장", command=lambda: self.save_file('right')).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="초기화", command=self.clear_file_comparison).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="▶ 비교하기", command=self.compare_files, style='Primary.TButton').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="💾 왼쪽 파일 저장", command=lambda: self.save_file('left'), style='Success.TButton').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="💾 오른쪽 파일 저장", command=lambda: self.save_file('right'), style='Success.TButton').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="🔄 초기화", command=self.clear_file_comparison).pack(side='left', padx=5)
 
         # 파일 내용 표시 영역
         file_text_frame = ttk.Frame(frame)
@@ -474,20 +604,26 @@ class CompareToolApp:
         # 왼쪽 파일 내용
         left_file_frame = ttk.Frame(file_text_frame)
         left_file_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(left_file_frame, text="왼쪽 파일 내용", font=('', 12, 'bold')).pack()
-        self.file_text_left = scrolledtext.ScrolledText(left_file_frame, wrap='word', width=40, height=30)
+        ttk.Label(left_file_frame, text="📄 왼쪽 파일 내용", style='Title.TLabel').pack(pady=(0, 5))
+        self.file_text_left = scrolledtext.ScrolledText(left_file_frame, wrap='word', width=40, height=30,
+                                                        bg=self.colors['text_bg'], fg=self.colors['fg'],
+                                                        font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                        insertbackground=self.colors['primary'])
         self.file_text_left.pack(fill='both', expand=True)
 
         # 오른쪽 파일 내용
         right_file_frame = ttk.Frame(file_text_frame)
         right_file_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(right_file_frame, text="오른쪽 파일 내용", font=('', 12, 'bold')).pack()
-        self.file_text_right = scrolledtext.ScrolledText(right_file_frame, wrap='word', width=40, height=30)
+        ttk.Label(right_file_frame, text="📄 오른쪽 파일 내용", style='Title.TLabel').pack(pady=(0, 5))
+        self.file_text_right = scrolledtext.ScrolledText(right_file_frame, wrap='word', width=40, height=30,
+                                                         bg=self.colors['text_bg'], fg=self.colors['fg'],
+                                                         font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                         insertbackground=self.colors['primary'])
         self.file_text_right.pack(fill='both', expand=True)
 
         # 차이점 표시를 위한 태그 설정
-        self.file_text_left.tag_config('diff', background='#ffcccc')
-        self.file_text_right.tag_config('diff', background='#ffcccc')
+        self.file_text_left.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'], font=('Consolas', 11, 'bold'))
+        self.file_text_right.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'], font=('Consolas', 11, 'bold'))
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.file_text_left, self.file_text_right)
