@@ -762,30 +762,44 @@ class CompareToolApp:
             widget.see('insert')
             return 'break'
 
-        # 키 바인딩 설정 (add='+' 로 기존 바인딩 유지)
-        widget.bind('<Control-c>', do_copy, add='+')
-        widget.bind('<Control-x>', do_cut, add='+')
-        widget.bind('<Control-v>', do_paste, add='+')
-        widget.bind('<Control-a>', do_select_all, add='+')
+        # OS별 키 바인딩 설정
+        import platform
+        system = platform.system()
 
-        # 대체 키 바인딩
-        widget.bind('<Control-Insert>', do_copy, add='+')
-        widget.bind('<Shift-Delete>', do_cut, add='+')
-        widget.bind('<Shift-Insert>', do_paste, add='+')
+        if system == 'Darwin':  # macOS
+            # macOS는 Command 키 사용
+            widget.bind('<Command-c>', do_copy, add='+')
+            widget.bind('<Command-x>', do_cut, add='+')
+            widget.bind('<Command-v>', do_paste, add='+')
+            widget.bind('<Command-a>', do_select_all, add='+')
+        else:  # Windows, Linux
+            # Windows/Linux는 Control 키 사용
+            widget.bind('<Control-c>', do_copy, add='+')
+            widget.bind('<Control-x>', do_cut, add='+')
+            widget.bind('<Control-v>', do_paste, add='+')
+            widget.bind('<Control-a>', do_select_all, add='+')
+
+            # Windows용 대체 키 바인딩
+            widget.bind('<Control-Insert>', do_copy, add='+')
+            widget.bind('<Shift-Delete>', do_cut, add='+')
+            widget.bind('<Shift-Insert>', do_paste, add='+')
 
         # 우클릭 컨텍스트 메뉴
         context_menu = tk.Menu(widget, tearoff=0)
+
+        # OS에 따른 단축키 표시 텍스트
+        key_modifier = "Cmd" if system == 'Darwin' else "Ctrl"
 
         def show_context_menu(event):
             """우클릭 시 컨텍스트 메뉴 표시"""
             context_menu.delete(0, tk.END)  # 기존 메뉴 항목 제거
 
-            # 메뉴 항목 추가
-            context_menu.add_command(label="복사 (Ctrl+C)", command=do_copy)
-            context_menu.add_command(label="잘라내기 (Ctrl+X)", command=do_cut)
-            context_menu.add_command(label="붙여넣기 (Ctrl+V)", command=do_paste)
+            # 메뉴 항목 추가 (OS에 맞는 단축키 표시)
+            context_menu.add_command(label=f"복사 ({key_modifier}+C)", command=do_copy)
+            context_menu.add_command(label=f"잘라내기 ({key_modifier}+X)", command=do_cut)
+            context_menu.add_command(label=f"붙여넣기 ({key_modifier}+V)", command=do_paste)
             context_menu.add_separator()
-            context_menu.add_command(label="전체 선택 (Ctrl+A)", command=do_select_all)
+            context_menu.add_command(label=f"전체 선택 ({key_modifier}+A)", command=do_select_all)
 
             # 메뉴 표시
             try:
