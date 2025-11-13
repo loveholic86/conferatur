@@ -186,26 +186,26 @@ class CompareToolApp:
         self.root.title("📂 파일/폴더 비교 도구")
         self.root.geometry("1300x850")
 
-        # 색상 테마 정의 (Bootstrap-inspired)
+        # 색상 테마 정의 (Pastel Blue Theme)
         self.colors = {
-            'bg': '#f8f9fa',           # Bootstrap light gray
-            'fg': '#212529',           # Bootstrap dark text
-            'primary': '#007bff',      # Bootstrap primary blue
-            'success': '#28a745',      # Bootstrap success green
-            'warning': '#ffc107',      # Bootstrap warning yellow
-            'danger': '#dc3545',       # Bootstrap danger red
-            'secondary': '#6c757d',    # Bootstrap secondary gray
-            'info': '#17a2b8',         # Bootstrap info cyan
-            'light': '#f8f9fa',        # Bootstrap light
-            'dark': '#343a40',         # Bootstrap dark
+            'bg': '#e3f2fd',           # Very light pastel blue
+            'fg': '#37474f',           # Soft dark blue-gray
+            'primary': '#64b5f6',      # Pastel sky blue
+            'success': '#81c784',      # Pastel mint green
+            'warning': '#ffb74d',      # Pastel orange
+            'danger': '#ef9a9a',       # Pastel pink-red
+            'secondary': '#90a4ae',    # Pastel blue-gray
+            'info': '#4dd0e1',         # Pastel cyan
+            'light': '#f5f9fc',        # Almost white with blue tint
+            'dark': '#546e7a',         # Pastel navy
             'white': '#ffffff',        # Pure white
-            'diff_bg': '#fff3cd',      # Light warning background
-            'diff_char': '#ffc107',    # Warning color for diff
+            'diff_bg': '#fff9e6',      # Very light yellow
+            'diff_char': '#ffecb3',    # Pastel yellow
             'text_bg': '#ffffff',      # White text background
-            'border': '#dee2e6',       # Bootstrap border color
-            'hover': '#0056b3',        # Darker blue for hover
-            'card_bg': '#ffffff',      # Card background
-            'shadow': '#00000020'      # Subtle shadow
+            'border': '#b3d9ff',       # Pastel blue border
+            'hover': '#42a5f5',        # Slightly darker pastel blue
+            'card_bg': '#fafcfe',      # Very light blue-white
+            'shadow': '#00000015'      # Very subtle shadow
         }
 
         # 루트 배경색 설정
@@ -293,7 +293,7 @@ class CompareToolApp:
                  background=[('active', self.colors['hover']),
                            ('pressed', self.colors['hover'])])
 
-        # Success Button - Bootstrap Success
+        # Success Button - Pastel Green
         style.configure('Success.TButton',
                        font=('Segoe UI', 10),
                        padding=[20, 10],
@@ -302,10 +302,10 @@ class CompareToolApp:
                        borderwidth=0,
                        relief='flat')
         style.map('Success.TButton',
-                 background=[('active', '#218838'),
-                           ('pressed', '#218838')])
+                 background=[('active', '#66bb6a'),
+                           ('pressed', '#66bb6a')])
 
-        # Danger Button - Bootstrap Danger
+        # Danger Button - Pastel Pink-Red
         style.configure('Danger.TButton',
                        font=('Segoe UI', 10),
                        padding=[20, 10],
@@ -314,10 +314,10 @@ class CompareToolApp:
                        borderwidth=0,
                        relief='flat')
         style.map('Danger.TButton',
-                 background=[('active', '#c82333'),
-                           ('pressed', '#c82333')])
+                 background=[('active', '#e57373'),
+                           ('pressed', '#e57373')])
 
-        # Info Button - Bootstrap Info
+        # Info Button - Pastel Cyan
         style.configure('Info.TButton',
                        font=('Segoe UI', 10),
                        padding=[20, 10],
@@ -326,8 +326,8 @@ class CompareToolApp:
                        borderwidth=0,
                        relief='flat')
         style.map('Info.TButton',
-                 background=[('active', '#138496'),
-                           ('pressed', '#138496')])
+                 background=[('active', '#26c6da'),
+                           ('pressed', '#26c6da')])
 
         # Label 스타일 - Bootstrap Typography
         style.configure('TLabel',
