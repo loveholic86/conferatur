@@ -186,23 +186,26 @@ class CompareToolApp:
         self.root.title("📂 파일/폴더 비교 도구")
         self.root.geometry("1300x850")
 
-        # 색상 테마 정의
+        # 색상 테마 정의 (Bootstrap-inspired)
         self.colors = {
-            'bg': '#f5f6fa',
-            'fg': '#2c3e50',
-            'primary': '#3498db',
-            'success': '#27ae60',
-            'warning': '#f39c12',
-            'danger': '#e74c3c',
-            'secondary': '#95a5a6',
-            'accent': '#9b59b6',
-            'light': '#ecf0f1',
-            'dark': '#34495e',
-            'diff_bg': '#ffe6e6',
-            'diff_char': '#ffcccc',
-            'text_bg': '#ffffff',
-            'tree_even': '#f8f9fa',
-            'tree_odd': '#ffffff'
+            'bg': '#f8f9fa',           # Bootstrap light gray
+            'fg': '#212529',           # Bootstrap dark text
+            'primary': '#007bff',      # Bootstrap primary blue
+            'success': '#28a745',      # Bootstrap success green
+            'warning': '#ffc107',      # Bootstrap warning yellow
+            'danger': '#dc3545',       # Bootstrap danger red
+            'secondary': '#6c757d',    # Bootstrap secondary gray
+            'info': '#17a2b8',         # Bootstrap info cyan
+            'light': '#f8f9fa',        # Bootstrap light
+            'dark': '#343a40',         # Bootstrap dark
+            'white': '#ffffff',        # Pure white
+            'diff_bg': '#fff3cd',      # Light warning background
+            'diff_char': '#ffc107',    # Warning color for diff
+            'text_bg': '#ffffff',      # White text background
+            'border': '#dee2e6',       # Bootstrap border color
+            'hover': '#0056b3',        # Darker blue for hover
+            'card_bg': '#ffffff',      # Card background
+            'shadow': '#00000020'      # Subtle shadow
         }
 
         # 루트 배경색 설정
@@ -236,92 +239,153 @@ class CompareToolApp:
         self.setup_file_compare_tab()
 
     def setup_styles(self):
-        """ttk 스타일 설정"""
+        """Bootstrap 스타일의 ttk 설정"""
         style = ttk.Style()
         style.theme_use('clam')
 
-        # Frame 스타일
+        # Frame 스타일 - Card 스타일
         style.configure('Tab.TFrame', background=self.colors['bg'])
+        style.configure('Card.TFrame',
+                       background=self.colors['card_bg'],
+                       borderwidth=1,
+                       relief='solid')
 
-        # Notebook 스타일
-        style.configure('TNotebook', background=self.colors['bg'], borderwidth=0)
-        style.configure('TNotebook.Tab',
-                       padding=[20, 10],
-                       font=('맑은 고딕', 11, 'bold'),
-                       background=self.colors['light'])
-        style.map('TNotebook.Tab',
-                 background=[('selected', self.colors['primary'])],
-                 foreground=[('selected', 'white')],
-                 expand=[('selected', [1, 1, 1, 0])])
-
-        # Button 스타일
-        style.configure('TButton',
-                       font=('맑은 고딕', 10),
-                       padding=[15, 8],
-                       background=self.colors['secondary'],
+        # Notebook 스타일 - Bootstrap Tabs
+        style.configure('TNotebook',
+                       background=self.colors['bg'],
                        borderwidth=0)
+        style.configure('TNotebook.Tab',
+                       padding=[25, 12],
+                       font=('Segoe UI', 11, 'bold'),
+                       background=self.colors['white'],
+                       borderwidth=1,
+                       relief='raised')
+        style.map('TNotebook.Tab',
+                 background=[('selected', self.colors['primary']),
+                           ('!selected', self.colors['white'])],
+                 foreground=[('selected', 'white'),
+                           ('!selected', self.colors['fg'])],
+                 borderwidth=[('selected', 0)],
+                 relief=[('selected', 'flat')])
+
+        # Button 스타일 - Bootstrap Buttons
+        style.configure('TButton',
+                       font=('Segoe UI', 10),
+                       padding=[20, 10],
+                       background=self.colors['secondary'],
+                       foreground='white',
+                       borderwidth=0,
+                       relief='flat')
         style.map('TButton',
-                 background=[('active', self.colors['dark'])],
-                 relief=[('pressed', 'flat'), ('!pressed', 'raised')])
+                 background=[('active', self.colors['dark']),
+                           ('pressed', self.colors['dark'])],
+                 relief=[('pressed', 'flat'), ('!pressed', 'flat')])
 
-        # Primary Button
+        # Primary Button - Bootstrap Primary
         style.configure('Primary.TButton',
-                       font=('맑은 고딕', 10, 'bold'),
-                       padding=[15, 8],
-                       background=self.colors['primary'])
+                       font=('Segoe UI', 10, 'bold'),
+                       padding=[20, 10],
+                       background=self.colors['primary'],
+                       foreground='white',
+                       borderwidth=0,
+                       relief='flat')
         style.map('Primary.TButton',
-                 background=[('active', '#2980b9')])
+                 background=[('active', self.colors['hover']),
+                           ('pressed', self.colors['hover'])])
 
-        # Success Button
+        # Success Button - Bootstrap Success
         style.configure('Success.TButton',
-                       font=('맑은 고딕', 10),
-                       padding=[15, 8],
-                       background=self.colors['success'])
+                       font=('Segoe UI', 10),
+                       padding=[20, 10],
+                       background=self.colors['success'],
+                       foreground='white',
+                       borderwidth=0,
+                       relief='flat')
         style.map('Success.TButton',
-                 background=[('active', '#229954')])
+                 background=[('active', '#218838'),
+                           ('pressed', '#218838')])
 
-        # Danger Button
+        # Danger Button - Bootstrap Danger
         style.configure('Danger.TButton',
-                       font=('맑은 고딕', 10),
-                       padding=[15, 8],
-                       background=self.colors['danger'])
+                       font=('Segoe UI', 10),
+                       padding=[20, 10],
+                       background=self.colors['danger'],
+                       foreground='white',
+                       borderwidth=0,
+                       relief='flat')
         style.map('Danger.TButton',
-                 background=[('active', '#c0392b')])
+                 background=[('active', '#c82333'),
+                           ('pressed', '#c82333')])
 
-        # Label 스타일
+        # Info Button - Bootstrap Info
+        style.configure('Info.TButton',
+                       font=('Segoe UI', 10),
+                       padding=[20, 10],
+                       background=self.colors['info'],
+                       foreground='white',
+                       borderwidth=0,
+                       relief='flat')
+        style.map('Info.TButton',
+                 background=[('active', '#138496'),
+                           ('pressed', '#138496')])
+
+        # Label 스타일 - Bootstrap Typography
         style.configure('TLabel',
                        background=self.colors['bg'],
                        foreground=self.colors['fg'],
-                       font=('맑은 고딕', 10))
+                       font=('Segoe UI', 10))
 
         style.configure('Title.TLabel',
                        background=self.colors['bg'],
                        foreground=self.colors['dark'],
-                       font=('맑은 고딕', 12, 'bold'))
+                       font=('Segoe UI', 13, 'bold'))
 
-        # Entry 스타일
+        style.configure('Card.TLabel',
+                       background=self.colors['card_bg'],
+                       foreground=self.colors['fg'],
+                       font=('Segoe UI', 10))
+
+        # Entry 스타일 - Bootstrap Form Control
         style.configure('TEntry',
-                       fieldbackground=self.colors['text_bg'],
-                       font=('맑은 고딕', 10))
+                       fieldbackground=self.colors['white'],
+                       foreground=self.colors['fg'],
+                       bordercolor=self.colors['border'],
+                       borderwidth=1,
+                       relief='solid',
+                       font=('Segoe UI', 10))
 
         # Radiobutton 스타일
         style.configure('TRadiobutton',
                        background=self.colors['bg'],
                        foreground=self.colors['fg'],
-                       font=('맑은 고딕', 10))
+                       font=('Segoe UI', 10))
 
-        # Treeview 스타일
+        # LabelFrame 스타일 - Bootstrap Card
+        style.configure('TLabelframe',
+                       background=self.colors['card_bg'],
+                       bordercolor=self.colors['border'],
+                       borderwidth=1,
+                       relief='solid')
+        style.configure('TLabelframe.Label',
+                       background=self.colors['card_bg'],
+                       foreground=self.colors['dark'],
+                       font=('Segoe UI', 11, 'bold'))
+
+        # Treeview 스타일 - Bootstrap Table
         style.configure('Treeview',
-                       background=self.colors['text_bg'],
-                       fieldbackground=self.colors['text_bg'],
+                       background=self.colors['white'],
+                       fieldbackground=self.colors['white'],
                        foreground=self.colors['fg'],
-                       font=('맑은 고딕', 10),
-                       rowheight=25)
+                       font=('Segoe UI', 10),
+                       rowheight=28,
+                       borderwidth=1,
+                       relief='solid')
         style.configure('Treeview.Heading',
                        background=self.colors['dark'],
                        foreground='white',
-                       font=('맑은 고딕', 10, 'bold'),
-                       relief='flat')
+                       font=('Segoe UI', 10, 'bold'),
+                       relief='flat',
+                       borderwidth=0)
         style.map('Treeview.Heading',
                  background=[('active', self.colors['primary'])])
         style.map('Treeview',
@@ -461,15 +525,23 @@ class CompareToolApp:
         self.folder_preview_right = scrolledtext.ScrolledText(right_preview_frame, wrap='word', width=40, height=15, state='disabled')
         self.folder_preview_right.pack(fill='both', expand=True)
 
-        # 텍스트 위젯 배경색 설정
-        self.folder_preview_left.config(bg=self.colors['text_bg'], fg=self.colors['fg'],
-                                       font=('Consolas', 10), relief='solid', borderwidth=1)
-        self.folder_preview_right.config(bg=self.colors['text_bg'], fg=self.colors['fg'],
-                                        font=('Consolas', 10), relief='solid', borderwidth=1)
+        # 텍스트 위젯 Bootstrap 스타일
+        self.folder_preview_left.config(bg=self.colors['white'], fg=self.colors['fg'],
+                                       font=('Consolas', 10), relief='solid', borderwidth=1,
+                                       highlightthickness=1, highlightbackground=self.colors['border'],
+                                       highlightcolor=self.colors['primary'])
+        self.folder_preview_right.config(bg=self.colors['white'], fg=self.colors['fg'],
+                                        font=('Consolas', 10), relief='solid', borderwidth=1,
+                                        highlightthickness=1, highlightbackground=self.colors['border'],
+                                        highlightcolor=self.colors['primary'])
 
-        # 차이점 표시를 위한 태그 설정
-        self.folder_preview_left.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'])
-        self.folder_preview_right.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'])
+        # 차이점 표시 - Bootstrap Warning 스타일
+        self.folder_preview_left.tag_config('diff', background=self.colors['diff_bg'],
+                                           foreground=self.colors['danger'],
+                                           font=('Consolas', 10, 'bold'))
+        self.folder_preview_right.tag_config('diff', background=self.colors['diff_bg'],
+                                            foreground=self.colors['danger'],
+                                            font=('Consolas', 10, 'bold'))
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.folder_preview_left, self.folder_preview_right)
@@ -506,23 +578,27 @@ class CompareToolApp:
         text_frame = ttk.Frame(frame)
         text_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
-        # 왼쪽 텍스트
-        left_frame = ttk.Frame(text_frame)
-        left_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(left_frame, text="📝 왼쪽 텍스트", style='Title.TLabel').pack(pady=(0, 5))
+        # 왼쪽 텍스트 - Bootstrap Card Style
+        left_frame = ttk.LabelFrame(text_frame, text=" 📝 왼쪽 텍스트 ", padding=10)
+        left_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
         self.text_left = scrolledtext.ScrolledText(left_frame, wrap='word', width=40, height=30,
-                                                   bg=self.colors['text_bg'], fg=self.colors['fg'],
+                                                   bg=self.colors['white'], fg=self.colors['fg'],
                                                    font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                   highlightthickness=1,
+                                                   highlightbackground=self.colors['border'],
+                                                   highlightcolor=self.colors['primary'],
                                                    insertbackground=self.colors['primary'])
         self.text_left.pack(fill='both', expand=True)
 
-        # 오른쪽 텍스트
-        right_frame = ttk.Frame(text_frame)
-        right_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(right_frame, text="📝 오른쪽 텍스트", style='Title.TLabel').pack(pady=(0, 5))
+        # 오른쪽 텍스트 - Bootstrap Card Style
+        right_frame = ttk.LabelFrame(text_frame, text=" 📝 오른쪽 텍스트 ", padding=10)
+        right_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
         self.text_right = scrolledtext.ScrolledText(right_frame, wrap='word', width=40, height=30,
-                                                    bg=self.colors['text_bg'], fg=self.colors['fg'],
+                                                    bg=self.colors['white'], fg=self.colors['fg'],
                                                     font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                    highlightthickness=1,
+                                                    highlightbackground=self.colors['border'],
+                                                    highlightcolor=self.colors['primary'],
                                                     insertbackground=self.colors['primary'])
         self.text_right.pack(fill='both', expand=True)
 
@@ -551,9 +627,15 @@ class CompareToolApp:
         enable_copy_paste(self.text_left)
         enable_copy_paste(self.text_right)
 
-        # 차이점 표시를 위한 태그 설정
-        self.text_left.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'], font=('Consolas', 11, 'bold'))
-        self.text_right.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'], font=('Consolas', 11, 'bold'))
+        # 차이점 표시 - Bootstrap Warning Alert 스타일
+        self.text_left.tag_config('diff',
+                                 background=self.colors['diff_bg'],
+                                 foreground=self.colors['danger'],
+                                 font=('Consolas', 11, 'bold'))
+        self.text_right.tag_config('diff',
+                                  background=self.colors['diff_bg'],
+                                  foreground=self.colors['danger'],
+                                  font=('Consolas', 11, 'bold'))
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.text_left, self.text_right)
@@ -601,29 +683,39 @@ class CompareToolApp:
         file_text_frame = ttk.Frame(frame)
         file_text_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
-        # 왼쪽 파일 내용
-        left_file_frame = ttk.Frame(file_text_frame)
-        left_file_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(left_file_frame, text="📄 왼쪽 파일 내용", style='Title.TLabel').pack(pady=(0, 5))
+        # 왼쪽 파일 내용 - Bootstrap Card Style
+        left_file_frame = ttk.LabelFrame(file_text_frame, text=" 📄 왼쪽 파일 내용 ", padding=10)
+        left_file_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
         self.file_text_left = scrolledtext.ScrolledText(left_file_frame, wrap='word', width=40, height=30,
-                                                        bg=self.colors['text_bg'], fg=self.colors['fg'],
+                                                        bg=self.colors['white'], fg=self.colors['fg'],
                                                         font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                        highlightthickness=1,
+                                                        highlightbackground=self.colors['border'],
+                                                        highlightcolor=self.colors['primary'],
                                                         insertbackground=self.colors['primary'])
         self.file_text_left.pack(fill='both', expand=True)
 
-        # 오른쪽 파일 내용
-        right_file_frame = ttk.Frame(file_text_frame)
-        right_file_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(right_file_frame, text="📄 오른쪽 파일 내용", style='Title.TLabel').pack(pady=(0, 5))
+        # 오른쪽 파일 내용 - Bootstrap Card Style
+        right_file_frame = ttk.LabelFrame(file_text_frame, text=" 📄 오른쪽 파일 내용 ", padding=10)
+        right_file_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
         self.file_text_right = scrolledtext.ScrolledText(right_file_frame, wrap='word', width=40, height=30,
-                                                         bg=self.colors['text_bg'], fg=self.colors['fg'],
+                                                         bg=self.colors['white'], fg=self.colors['fg'],
                                                          font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                         highlightthickness=1,
+                                                         highlightbackground=self.colors['border'],
+                                                         highlightcolor=self.colors['primary'],
                                                          insertbackground=self.colors['primary'])
         self.file_text_right.pack(fill='both', expand=True)
 
-        # 차이점 표시를 위한 태그 설정
-        self.file_text_left.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'], font=('Consolas', 11, 'bold'))
-        self.file_text_right.tag_config('diff', background=self.colors['diff_char'], foreground=self.colors['danger'], font=('Consolas', 11, 'bold'))
+        # 차이점 표시 - Bootstrap Warning Alert 스타일
+        self.file_text_left.tag_config('diff',
+                                       background=self.colors['diff_bg'],
+                                       foreground=self.colors['danger'],
+                                       font=('Consolas', 11, 'bold'))
+        self.file_text_right.tag_config('diff',
+                                        background=self.colors['diff_bg'],
+                                        foreground=self.colors['danger'],
+                                        font=('Consolas', 11, 'bold'))
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.file_text_left, self.file_text_right)
