@@ -395,6 +395,18 @@ class CompareToolApp:
         self.text_right = scrolledtext.ScrolledText(right_frame, wrap='word', width=40, height=30)
         self.text_right.pack(fill='both', expand=True)
 
+        # 붙여넣기 바인딩 추가 (명시적으로 붙여넣기 기능 활성화)
+        def enable_paste(widget):
+            """붙여넣기 기능 활성화"""
+            # Ctrl+V 붙여넣기
+            widget.bind('<Control-v>', lambda e: widget.event_generate('<<Paste>>'))
+            widget.bind('<Control-V>', lambda e: widget.event_generate('<<Paste>>'))
+            # Shift+Insert 붙여넣기
+            widget.bind('<Shift-Insert>', lambda e: widget.event_generate('<<Paste>>'))
+
+        enable_paste(self.text_left)
+        enable_paste(self.text_right)
+
         # 차이점 표시를 위한 태그 설정
         self.text_left.tag_config('diff', background='#ffcccc')
         self.text_right.tag_config('diff', background='#ffcccc')
@@ -500,6 +512,17 @@ class CompareToolApp:
         widget1.bind("<Button-5>", scroll_down)
         widget2.bind("<Button-4>", scroll_up)
         widget2.bind("<Button-5>", scroll_down)
+
+        # 스크롤바 드래그 동기화
+        # ScrolledText의 내부 스크롤바 command를 동기화 함수로 재설정
+        def on_scrollbar(*args):
+            """스크롤바 드래그 이벤트 핸들러"""
+            widget1.yview(*args)
+            widget2.yview(*args)
+
+        # ScrolledText의 내부 스크롤바에 접근하여 command 재설정
+        widget1.vbar.config(command=on_scrollbar)
+        widget2.vbar.config(command=on_scrollbar)
 
     def browse_folder(self, var):
         """폴더 선택 대화상자"""
@@ -1114,11 +1137,13 @@ class CompareToolApp:
 
             for item in current_items:
                 if category == 'folder':
+                    # 폴더 경로만 표시
                     if data_type == 'favorite':
-                        display = f"{item['name']}: {item['left']} ↔ {item['right']} [{item['method']}]"
+                        display = f"{item['name']}: {item['left']} ↔ {item['right']}"
                     else:
-                        display = f"[{item['timestamp']}] {item['left']} ↔ {item['right']} [{item['method']}]"
+                        display = f"[{item['timestamp']}] {item['left']} ↔ {item['right']}"
                 elif category == 'file':
+                    # 파일 경로 및 이름만 표시
                     if data_type == 'favorite':
                         display = f"{item['name']}: {item['left']} ↔ {item['right']}"
                     else:
