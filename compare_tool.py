@@ -602,30 +602,7 @@ class CompareToolApp:
                                                     insertbackground=self.colors['primary'])
         self.text_right.pack(fill='both', expand=True)
 
-        # 복사/붙여넣기 바인딩 추가 (명시적으로 복사/붙여넣기 기능 활성화)
-        def enable_copy_paste(widget):
-            """복사/붙여넣기 기능 활성화"""
-            # 붙여넣기
-            widget.bind('<Control-v>', lambda e: widget.event_generate('<<Paste>>'))
-            widget.bind('<Control-V>', lambda e: widget.event_generate('<<Paste>>'))
-            widget.bind('<Shift-Insert>', lambda e: widget.event_generate('<<Paste>>'))
-
-            # 복사
-            widget.bind('<Control-c>', lambda e: widget.event_generate('<<Copy>>'))
-            widget.bind('<Control-C>', lambda e: widget.event_generate('<<Copy>>'))
-            widget.bind('<Control-Insert>', lambda e: widget.event_generate('<<Copy>>'))
-
-            # 잘라내기
-            widget.bind('<Control-x>', lambda e: widget.event_generate('<<Cut>>'))
-            widget.bind('<Control-X>', lambda e: widget.event_generate('<<Cut>>'))
-            widget.bind('<Shift-Delete>', lambda e: widget.event_generate('<<Cut>>'))
-
-            # 전체 선택
-            widget.bind('<Control-a>', lambda e: widget.tag_add('sel', '1.0', 'end'))
-            widget.bind('<Control-A>', lambda e: widget.tag_add('sel', '1.0', 'end'))
-
-        enable_copy_paste(self.text_left)
-        enable_copy_paste(self.text_right)
+        # ScrolledText는 기본적으로 복사/붙여넣기가 작동함 (별도 바인딩 불필요)
 
         # 차이점 표시 - Bootstrap Warning Alert 스타일
         self.text_left.tag_config('diff',
