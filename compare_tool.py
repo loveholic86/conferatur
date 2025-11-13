@@ -8,8 +8,10 @@
 3. 파일 내용 비교
 """
 
+import ttkbootstrap as ttk
+from ttkbootstrap.constants import *
+from tkinter import filedialog, messagebox, scrolledtext, simpledialog
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext, simpledialog
 import os
 import hashlib
 import difflib
@@ -198,6 +200,7 @@ class CompareToolApp:
 
         # OS 정보 출력
         print(f"=== 파일/폴더 비교 도구 시작 ===")
+        print(f"테마: minty (ttkbootstrap)")
         print(f"운영체제: {self.system} ({os_name})")
         if self.is_macos:
             print(f"키보드 단축키: Cmd+C (복사), Cmd+V (붙여넣기), Cmd+X (잘라내기), Cmd+A (전체선택)")
@@ -205,34 +208,6 @@ class CompareToolApp:
             print(f"키보드 단축키: Ctrl+C (복사), Ctrl+V (붙여넣기), Ctrl+X (잘라내기), Ctrl+A (전체선택)")
         print(f"우클릭: 컨텍스트 메뉴")
         print()
-
-        # 색상 테마 정의 (Pastel Blue Theme)
-        self.colors = {
-            'bg': '#e3f2fd',           # Very light pastel blue
-            'fg': '#37474f',           # Soft dark blue-gray
-            'primary': '#64b5f6',      # Pastel sky blue
-            'success': '#81c784',      # Pastel mint green
-            'warning': '#ffb74d',      # Pastel orange
-            'danger': '#ef9a9a',       # Pastel pink-red
-            'secondary': '#90a4ae',    # Pastel blue-gray
-            'info': '#4dd0e1',         # Pastel cyan
-            'light': '#f5f9fc',        # Almost white with blue tint
-            'dark': '#546e7a',         # Pastel navy
-            'white': '#ffffff',        # Pure white
-            'diff_bg': '#fff9e6',      # Very light yellow
-            'diff_char': '#ffecb3',    # Pastel yellow
-            'text_bg': '#ffffff',      # White text background
-            'border': '#b3d9ff',       # Pastel blue border
-            'hover': '#42a5f5',        # Slightly darker pastel blue
-            'card_bg': '#fafcfe',      # Very light blue-white
-            'shadow': '#00000015'      # Very subtle shadow
-        }
-
-        # 루트 배경색 설정
-        self.root.configure(bg=self.colors['bg'])
-
-        # 스타일 설정
-        self.setup_styles()
 
         # 데이터 매니저 초기화
         self.data_manager = DataManager()
@@ -245,9 +220,9 @@ class CompareToolApp:
         self.notebook.pack(fill='both', expand=True, padx=10, pady=10)
 
         # 세 가지 모드 탭 생성
-        self.folder_compare_tab = ttk.Frame(self.notebook, style='Tab.TFrame')
-        self.text_compare_tab = ttk.Frame(self.notebook, style='Tab.TFrame')
-        self.file_compare_tab = ttk.Frame(self.notebook, style='Tab.TFrame')
+        self.folder_compare_tab = ttk.Frame(self.notebook)
+        self.text_compare_tab = ttk.Frame(self.notebook)
+        self.file_compare_tab = ttk.Frame(self.notebook)
 
         self.notebook.add(self.folder_compare_tab, text=" 📁 폴더 비교 ")
         self.notebook.add(self.text_compare_tab, text=" 📝 텍스트 비교 ")
@@ -258,159 +233,6 @@ class CompareToolApp:
         self.setup_text_compare_tab()
         self.setup_file_compare_tab()
 
-    def setup_styles(self):
-        """Bootstrap 스타일의 ttk 설정"""
-        style = ttk.Style()
-        style.theme_use('clam')
-
-        # Frame 스타일 - Card 스타일
-        style.configure('Tab.TFrame', background=self.colors['bg'])
-        style.configure('Card.TFrame',
-                       background=self.colors['card_bg'],
-                       borderwidth=1,
-                       relief='solid')
-
-        # Notebook 스타일 - Bootstrap Tabs
-        style.configure('TNotebook',
-                       background=self.colors['bg'],
-                       borderwidth=0)
-        style.configure('TNotebook.Tab',
-                       padding=[25, 12],
-                       font=('Segoe UI', 11, 'bold'),
-                       background=self.colors['white'],
-                       borderwidth=1,
-                       relief='raised')
-        style.map('TNotebook.Tab',
-                 background=[('selected', self.colors['primary']),
-                           ('!selected', self.colors['white'])],
-                 foreground=[('selected', 'white'),
-                           ('!selected', self.colors['fg'])],
-                 borderwidth=[('selected', 0)],
-                 relief=[('selected', 'flat')])
-
-        # Button 스타일 - Bootstrap Buttons
-        style.configure('TButton',
-                       font=('Segoe UI', 10),
-                       padding=[20, 10],
-                       background=self.colors['secondary'],
-                       foreground='white',
-                       borderwidth=0,
-                       relief='flat')
-        style.map('TButton',
-                 background=[('active', self.colors['dark']),
-                           ('pressed', self.colors['dark'])],
-                 relief=[('pressed', 'flat'), ('!pressed', 'flat')])
-
-        # Primary Button - Bootstrap Primary
-        style.configure('Primary.TButton',
-                       font=('Segoe UI', 10, 'bold'),
-                       padding=[20, 10],
-                       background=self.colors['primary'],
-                       foreground='white',
-                       borderwidth=0,
-                       relief='flat')
-        style.map('Primary.TButton',
-                 background=[('active', self.colors['hover']),
-                           ('pressed', self.colors['hover'])])
-
-        # Success Button - Pastel Green
-        style.configure('Success.TButton',
-                       font=('Segoe UI', 10),
-                       padding=[20, 10],
-                       background=self.colors['success'],
-                       foreground='white',
-                       borderwidth=0,
-                       relief='flat')
-        style.map('Success.TButton',
-                 background=[('active', '#66bb6a'),
-                           ('pressed', '#66bb6a')])
-
-        # Danger Button - Pastel Pink-Red
-        style.configure('Danger.TButton',
-                       font=('Segoe UI', 10),
-                       padding=[20, 10],
-                       background=self.colors['danger'],
-                       foreground='white',
-                       borderwidth=0,
-                       relief='flat')
-        style.map('Danger.TButton',
-                 background=[('active', '#e57373'),
-                           ('pressed', '#e57373')])
-
-        # Info Button - Pastel Cyan
-        style.configure('Info.TButton',
-                       font=('Segoe UI', 10),
-                       padding=[20, 10],
-                       background=self.colors['info'],
-                       foreground='white',
-                       borderwidth=0,
-                       relief='flat')
-        style.map('Info.TButton',
-                 background=[('active', '#26c6da'),
-                           ('pressed', '#26c6da')])
-
-        # Label 스타일 - Bootstrap Typography
-        style.configure('TLabel',
-                       background=self.colors['bg'],
-                       foreground=self.colors['fg'],
-                       font=('Segoe UI', 10))
-
-        style.configure('Title.TLabel',
-                       background=self.colors['bg'],
-                       foreground=self.colors['dark'],
-                       font=('Segoe UI', 13, 'bold'))
-
-        style.configure('Card.TLabel',
-                       background=self.colors['card_bg'],
-                       foreground=self.colors['fg'],
-                       font=('Segoe UI', 10))
-
-        # Entry 스타일 - Bootstrap Form Control
-        style.configure('TEntry',
-                       fieldbackground=self.colors['white'],
-                       foreground=self.colors['fg'],
-                       bordercolor=self.colors['border'],
-                       borderwidth=1,
-                       relief='solid',
-                       font=('Segoe UI', 10))
-
-        # Radiobutton 스타일
-        style.configure('TRadiobutton',
-                       background=self.colors['bg'],
-                       foreground=self.colors['fg'],
-                       font=('Segoe UI', 10))
-
-        # LabelFrame 스타일 - Bootstrap Card
-        style.configure('TLabelframe',
-                       background=self.colors['card_bg'],
-                       bordercolor=self.colors['border'],
-                       borderwidth=1,
-                       relief='solid')
-        style.configure('TLabelframe.Label',
-                       background=self.colors['card_bg'],
-                       foreground=self.colors['dark'],
-                       font=('Segoe UI', 11, 'bold'))
-
-        # Treeview 스타일 - Bootstrap Table
-        style.configure('Treeview',
-                       background=self.colors['white'],
-                       fieldbackground=self.colors['white'],
-                       foreground=self.colors['fg'],
-                       font=('Segoe UI', 10),
-                       rowheight=28,
-                       borderwidth=1,
-                       relief='solid')
-        style.configure('Treeview.Heading',
-                       background=self.colors['dark'],
-                       foreground='white',
-                       font=('Segoe UI', 10, 'bold'),
-                       relief='flat',
-                       borderwidth=0)
-        style.map('Treeview.Heading',
-                 background=[('active', self.colors['primary'])])
-        style.map('Treeview',
-                 background=[('selected', self.colors['primary'])],
-                 foreground=[('selected', 'white')])
 
     def create_menubar(self):
         """메뉴바 생성"""
@@ -471,7 +293,7 @@ class CompareToolApp:
         ttk.Radiobutton(option_frame, text="📅 날짜 비교", variable=self.compare_method_var, value="date").pack(side='left', padx=10)
         ttk.Radiobutton(option_frame, text="🔍📅 MD5 + 날짜", variable=self.compare_method_var, value="both").pack(side='left', padx=10)
 
-        ttk.Button(option_frame, text="▶ 비교 시작", command=self.compare_folders, style='Primary.TButton').pack(side='left', padx=20)
+        ttk.Button(option_frame, text="▶ 비교 시작", command=self.compare_folders, bootstyle='primary').pack(side='left', padx=20)
         ttk.Button(option_frame, text="🔄 초기화", command=self.clear_folder_comparison).pack(side='left', padx=5)
 
         # 결과 영역
@@ -520,9 +342,9 @@ class CompareToolApp:
         button_frame = ttk.Frame(result_frame)
         button_frame.pack(fill='x', pady=5)
 
-        ttk.Button(button_frame, text="📤 왼쪽 → 오른쪽 복사", command=lambda: self.copy_file('left_to_right'), style='Success.TButton').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="📥 오른쪽 → 왼쪽 복사", command=lambda: self.copy_file('right_to_left'), style='Success.TButton').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="🗑️ 선택 항목 삭제", command=self.delete_selected, style='Danger.TButton').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="📤 왼쪽 → 오른쪽 복사", command=lambda: self.copy_file('left_to_right'), bootstyle='success').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="📥 오른쪽 → 왼쪽 복사", command=lambda: self.copy_file('right_to_left'), bootstyle='success').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="🗑️ 선택 항목 삭제", command=self.delete_selected, bootstyle='danger').pack(side='left', padx=5)
 
         # 파일 내용 미리보기 영역
         preview_label = ttk.Label(result_frame, text="파일 내용 미리보기 (파일을 선택하세요)", font=('', 10, 'bold'))
@@ -546,21 +368,21 @@ class CompareToolApp:
         self.folder_preview_right.pack(fill='both', expand=True)
 
         # 텍스트 위젯 Bootstrap 스타일
-        self.folder_preview_left.config(bg=self.colors['white'], fg=self.colors['fg'],
+        self.folder_preview_left.config(bg='white', fg='#333',
                                        font=('Consolas', 10), relief='solid', borderwidth=1,
-                                       highlightthickness=1, highlightbackground=self.colors['border'],
-                                       highlightcolor=self.colors['primary'])
-        self.folder_preview_right.config(bg=self.colors['white'], fg=self.colors['fg'],
+                                       highlightthickness=1, highlightbackground='#ccc',
+                                       highlightcolor='#78C2AD')
+        self.folder_preview_right.config(bg='white', fg='#333',
                                         font=('Consolas', 10), relief='solid', borderwidth=1,
-                                        highlightthickness=1, highlightbackground=self.colors['border'],
-                                        highlightcolor=self.colors['primary'])
+                                        highlightthickness=1, highlightbackground='#ccc',
+                                        highlightcolor='#78C2AD')
 
         # 차이점 표시 - Bootstrap Warning 스타일
-        self.folder_preview_left.tag_config('diff', background=self.colors['diff_bg'],
-                                           foreground=self.colors['danger'],
+        self.folder_preview_left.tag_config('diff', background='#fff9e6',
+                                           foreground='#ff6b6b',
                                            font=('Consolas', 10, 'bold'))
-        self.folder_preview_right.tag_config('diff', background=self.colors['diff_bg'],
-                                            foreground=self.colors['danger'],
+        self.folder_preview_right.tag_config('diff', background='#fff9e6',
+                                            foreground='#ff6b6b',
                                             font=('Consolas', 10, 'bold'))
 
         # 스크롤 동기화
@@ -589,9 +411,9 @@ class CompareToolApp:
         button_frame = ttk.Frame(control_frame)
         button_frame.pack(fill='x', pady=5)
 
-        ttk.Button(button_frame, text="▶ 비교하기", command=self.compare_text, style='Primary.TButton').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="📥 왼쪽으로 적용", command=lambda: self.apply_text('to_left'), style='Success.TButton').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="📤 오른쪽으로 적용", command=lambda: self.apply_text('to_right'), style='Success.TButton').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="▶ 비교하기", command=self.compare_text, bootstyle='primary').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="📥 왼쪽으로 적용", command=lambda: self.apply_text('to_left'), bootstyle='success').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="📤 오른쪽으로 적용", command=lambda: self.apply_text('to_right'), bootstyle='success').pack(side='left', padx=5)
         ttk.Button(button_frame, text="🔄 초기화", command=self.clear_text_comparison).pack(side='left', padx=5)
 
         # 텍스트 입력 영역
@@ -599,27 +421,27 @@ class CompareToolApp:
         text_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
         # 왼쪽 텍스트 - Bootstrap Card Style
-        left_frame = ttk.LabelFrame(text_frame, text=" 📝 왼쪽 텍스트 ", padding=10)
+        left_frame = ttk.Labelframe(text_frame, text=" 📝 왼쪽 텍스트 ", padding=10)
         left_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
         self.text_left = scrolledtext.ScrolledText(left_frame, wrap='word', width=40, height=30,
-                                                   bg=self.colors['white'], fg=self.colors['fg'],
+                                                   bg='white', fg='#333',
                                                    font=('Consolas', 11), relief='solid', borderwidth=1,
                                                    highlightthickness=1,
-                                                   highlightbackground=self.colors['border'],
-                                                   highlightcolor=self.colors['primary'],
-                                                   insertbackground=self.colors['primary'])
+                                                   highlightbackground='#ccc',
+                                                   highlightcolor='#78C2AD',
+                                                   insertbackground='#78C2AD')
         self.text_left.pack(fill='both', expand=True)
 
         # 오른쪽 텍스트 - Bootstrap Card Style
-        right_frame = ttk.LabelFrame(text_frame, text=" 📝 오른쪽 텍스트 ", padding=10)
+        right_frame = ttk.Labelframe(text_frame, text=" 📝 오른쪽 텍스트 ", padding=10)
         right_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
         self.text_right = scrolledtext.ScrolledText(right_frame, wrap='word', width=40, height=30,
-                                                    bg=self.colors['white'], fg=self.colors['fg'],
+                                                    bg='white', fg='#333',
                                                     font=('Consolas', 11), relief='solid', borderwidth=1,
                                                     highlightthickness=1,
-                                                    highlightbackground=self.colors['border'],
-                                                    highlightcolor=self.colors['primary'],
-                                                    insertbackground=self.colors['primary'])
+                                                    highlightbackground='#ccc',
+                                                    highlightcolor='#78C2AD',
+                                                    insertbackground='#78C2AD')
         self.text_right.pack(fill='both', expand=True)
 
         # 복사/붙여넣기 기능 활성화
@@ -628,12 +450,12 @@ class CompareToolApp:
 
         # 차이점 표시 - Bootstrap Warning Alert 스타일
         self.text_left.tag_config('diff',
-                                 background=self.colors['diff_bg'],
-                                 foreground=self.colors['danger'],
+                                 background='#fff9e6',
+                                 foreground='#ff6b6b',
                                  font=('Consolas', 11, 'bold'))
         self.text_right.tag_config('diff',
-                                  background=self.colors['diff_bg'],
-                                  foreground=self.colors['danger'],
+                                  background='#fff9e6',
+                                  foreground='#ff6b6b',
                                   font=('Consolas', 11, 'bold'))
 
         # 스크롤 동기화
@@ -673,9 +495,9 @@ class CompareToolApp:
         # 버튼
         button_frame = ttk.Frame(control_frame)
         button_frame.grid(row=3, column=0, columnspan=3, pady=10)
-        ttk.Button(button_frame, text="▶ 비교하기", command=self.compare_files, style='Primary.TButton').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="💾 왼쪽 파일 저장", command=lambda: self.save_file('left'), style='Success.TButton').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="💾 오른쪽 파일 저장", command=lambda: self.save_file('right'), style='Success.TButton').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="▶ 비교하기", command=self.compare_files, bootstyle='primary').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="💾 왼쪽 파일 저장", command=lambda: self.save_file('left'), bootstyle='success').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="💾 오른쪽 파일 저장", command=lambda: self.save_file('right'), bootstyle='success').pack(side='left', padx=5)
         ttk.Button(button_frame, text="🔄 초기화", command=self.clear_file_comparison).pack(side='left', padx=5)
 
         # 파일 내용 표시 영역
@@ -683,37 +505,37 @@ class CompareToolApp:
         file_text_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
         # 왼쪽 파일 내용 - Bootstrap Card Style
-        left_file_frame = ttk.LabelFrame(file_text_frame, text=" 📄 왼쪽 파일 내용 ", padding=10)
+        left_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 왼쪽 파일 내용 ", padding=10)
         left_file_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
         self.file_text_left = scrolledtext.ScrolledText(left_file_frame, wrap='word', width=40, height=30,
-                                                        bg=self.colors['white'], fg=self.colors['fg'],
+                                                        bg='white', fg='#333',
                                                         font=('Consolas', 11), relief='solid', borderwidth=1,
                                                         highlightthickness=1,
-                                                        highlightbackground=self.colors['border'],
-                                                        highlightcolor=self.colors['primary'],
-                                                        insertbackground=self.colors['primary'])
+                                                        highlightbackground='#ccc',
+                                                        highlightcolor='#78C2AD',
+                                                        insertbackground='#78C2AD')
         self.file_text_left.pack(fill='both', expand=True)
 
         # 오른쪽 파일 내용 - Bootstrap Card Style
-        right_file_frame = ttk.LabelFrame(file_text_frame, text=" 📄 오른쪽 파일 내용 ", padding=10)
+        right_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 오른쪽 파일 내용 ", padding=10)
         right_file_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
         self.file_text_right = scrolledtext.ScrolledText(right_file_frame, wrap='word', width=40, height=30,
-                                                         bg=self.colors['white'], fg=self.colors['fg'],
+                                                         bg='white', fg='#333',
                                                          font=('Consolas', 11), relief='solid', borderwidth=1,
                                                          highlightthickness=1,
-                                                         highlightbackground=self.colors['border'],
-                                                         highlightcolor=self.colors['primary'],
-                                                         insertbackground=self.colors['primary'])
+                                                         highlightbackground='#ccc',
+                                                         highlightcolor='#78C2AD',
+                                                         insertbackground='#78C2AD')
         self.file_text_right.pack(fill='both', expand=True)
 
         # 차이점 표시 - Bootstrap Warning Alert 스타일
         self.file_text_left.tag_config('diff',
-                                       background=self.colors['diff_bg'],
-                                       foreground=self.colors['danger'],
+                                       background='#fff9e6',
+                                       foreground='#ff6b6b',
                                        font=('Consolas', 11, 'bold'))
         self.file_text_right.tag_config('diff',
-                                        background=self.colors['diff_bg'],
-                                        foreground=self.colors['danger'],
+                                        background='#fff9e6',
+                                        foreground='#ff6b6b',
                                         font=('Consolas', 11, 'bold'))
 
         # 복사/붙여넣기 기능 활성화
@@ -1756,7 +1578,8 @@ class CompareToolApp:
 
 
 def main():
-    root = tk.Tk()
+    # ttkbootstrap Window with minty theme
+    root = ttk.Window(themename="minty")
     app = CompareToolApp(root)
     root.mainloop()
 
