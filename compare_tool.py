@@ -346,6 +346,9 @@ class CompareToolApp:
         self.folder_preview_left.tag_config('diff', background='#ffcccc')
         self.folder_preview_right.tag_config('diff', background='#ffcccc')
 
+        # 스크롤 동기화
+        self.setup_scroll_sync(self.folder_preview_left, self.folder_preview_right)
+
     def setup_text_compare_tab(self):
         """두 번째 모드: 텍스트 직접 비교"""
         frame = self.text_compare_tab
@@ -395,6 +398,9 @@ class CompareToolApp:
         # 차이점 표시를 위한 태그 설정
         self.text_left.tag_config('diff', background='#ffcccc')
         self.text_right.tag_config('diff', background='#ffcccc')
+
+        # 스크롤 동기화
+        self.setup_scroll_sync(self.text_left, self.text_right)
 
     def setup_file_compare_tab(self):
         """세 번째 모드: 파일 내용 비교"""
@@ -456,7 +462,45 @@ class CompareToolApp:
         self.file_text_left.tag_config('diff', background='#ffcccc')
         self.file_text_right.tag_config('diff', background='#ffcccc')
 
+        # 스크롤 동기화
+        self.setup_scroll_sync(self.file_text_left, self.file_text_right)
+
     # 유틸리티 메서드
+    def setup_scroll_sync(self, widget1, widget2):
+        """두 텍스트 위젯의 스크롤 동기화"""
+        def on_scroll(*args):
+            """스크롤 이벤트 핸들러"""
+            widget1.yview(*args)
+            widget2.yview(*args)
+
+        def on_mousewheel(event, widget_source):
+            """마우스 휠 이벤트 핸들러"""
+            # 양쪽 위젯 동시에 스크롤
+            delta = -1 if event.delta > 0 else 1
+            widget1.yview_scroll(delta, "units")
+            widget2.yview_scroll(delta, "units")
+            return "break"  # 이벤트 전파 방지
+
+        # 각 위젯에 마우스 휠 이벤트 바인딩
+        widget1.bind("<MouseWheel>", lambda e: on_mousewheel(e, widget1))
+        widget2.bind("<MouseWheel>", lambda e: on_mousewheel(e, widget2))
+
+        # 리눅스/맥용 마우스 휠 이벤트
+        def scroll_up(event):
+            widget1.yview_scroll(-1, "units")
+            widget2.yview_scroll(-1, "units")
+            return "break"
+
+        def scroll_down(event):
+            widget1.yview_scroll(1, "units")
+            widget2.yview_scroll(1, "units")
+            return "break"
+
+        widget1.bind("<Button-4>", scroll_up)
+        widget1.bind("<Button-5>", scroll_down)
+        widget2.bind("<Button-4>", scroll_up)
+        widget2.bind("<Button-5>", scroll_down)
+
     def browse_folder(self, var):
         """폴더 선택 대화상자"""
         folder = filedialog.askdirectory()
