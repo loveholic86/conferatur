@@ -310,13 +310,44 @@ class CompareToolApp:
         self.folder_tree.column('오른쪽_크기', width=100)
         self.folder_tree.column('오른쪽_수정일', width=150)
 
+        # 트리뷰 선택 이벤트 바인딩
+        self.folder_tree.bind('<<TreeviewSelect>>', self.on_folder_tree_select)
+
         # 버튼 영역
         button_frame = ttk.Frame(result_frame)
-        button_frame.pack(fill='x', pady=10)
+        button_frame.pack(fill='x', pady=5)
 
         ttk.Button(button_frame, text="왼쪽 → 오른쪽 복사", command=lambda: self.copy_file('left_to_right')).pack(side='left', padx=5)
         ttk.Button(button_frame, text="오른쪽 → 왼쪽 복사", command=lambda: self.copy_file('right_to_left')).pack(side='left', padx=5)
         ttk.Button(button_frame, text="선택 항목 삭제", command=self.delete_selected).pack(side='left', padx=5)
+
+        # 파일 내용 미리보기 영역
+        preview_label = ttk.Label(result_frame, text="파일 내용 미리보기 (파일을 선택하세요)", font=('', 10, 'bold'))
+        preview_label.pack(fill='x', pady=(10, 5))
+
+        preview_frame = ttk.Frame(result_frame)
+        preview_frame.pack(fill='both', expand=True, pady=5)
+
+        # 왼쪽 파일 미리보기
+        left_preview_frame = ttk.Frame(preview_frame)
+        left_preview_frame.pack(side='left', fill='both', expand=True, padx=5)
+        ttk.Label(left_preview_frame, text="왼쪽 파일", font=('', 9, 'bold')).pack()
+        self.folder_preview_left = scrolledtext.ScrolledText(left_preview_frame, wrap='word', width=40, height=15, state='disabled')
+        self.folder_preview_left.pack(fill='both', expand=True)
+
+        # 오른쪽 파일 미리보기
+        right_preview_frame = ttk.Frame(preview_frame)
+        right_preview_frame.pack(side='left', fill='both', expand=True, padx=5)
+        ttk.Label(right_preview_frame, text="오른쪽 파일", font=('', 9, 'bold')).pack()
+        self.folder_preview_right = scrolledtext.ScrolledText(right_preview_frame, wrap='word', width=40, height=15, state='disabled')
+        self.folder_preview_right.pack(fill='both', expand=True)
+
+        # 차이점 표시를 위한 태그 설정
+        self.folder_preview_left.tag_config('diff', background='#ffcccc')
+        self.folder_preview_right.tag_config('diff', background='#ffcccc')
+
+        # 스크롤 동기화
+        self.setup_scroll_sync(self.folder_preview_left, self.folder_preview_right)
 
     def setup_text_compare_tab(self):
         """두 번째 모드: 텍스트 직접 비교"""
@@ -367,6 +398,9 @@ class CompareToolApp:
         # 차이점 표시를 위한 태그 설정
         self.text_left.tag_config('diff', background='#ffcccc')
         self.text_right.tag_config('diff', background='#ffcccc')
+
+        # 스크롤 동기화
+        self.setup_scroll_sync(self.text_left, self.text_right)
 
     def setup_file_compare_tab(self):
         """세 번째 모드: 파일 내용 비교"""
@@ -428,7 +462,45 @@ class CompareToolApp:
         self.file_text_left.tag_config('diff', background='#ffcccc')
         self.file_text_right.tag_config('diff', background='#ffcccc')
 
+        # 스크롤 동기화
+        self.setup_scroll_sync(self.file_text_left, self.file_text_right)
+
     # 유틸리티 메서드
+    def setup_scroll_sync(self, widget1, widget2):
+        """두 텍스트 위젯의 스크롤 동기화"""
+        def on_scroll(*args):
+            """스크롤 이벤트 핸들러"""
+            widget1.yview(*args)
+            widget2.yview(*args)
+
+        def on_mousewheel(event, widget_source):
+            """마우스 휠 이벤트 핸들러"""
+            # 양쪽 위젯 동시에 스크롤
+            delta = -1 if event.delta > 0 else 1
+            widget1.yview_scroll(delta, "units")
+            widget2.yview_scroll(delta, "units")
+            return "break"  # 이벤트 전파 방지
+
+        # 각 위젯에 마우스 휠 이벤트 바인딩
+        widget1.bind("<MouseWheel>", lambda e: on_mousewheel(e, widget1))
+        widget2.bind("<MouseWheel>", lambda e: on_mousewheel(e, widget2))
+
+        # 리눅스/맥용 마우스 휠 이벤트
+        def scroll_up(event):
+            widget1.yview_scroll(-1, "units")
+            widget2.yview_scroll(-1, "units")
+            return "break"
+
+        def scroll_down(event):
+            widget1.yview_scroll(1, "units")
+            widget2.yview_scroll(1, "units")
+            return "break"
+
+        widget1.bind("<Button-4>", scroll_up)
+        widget1.bind("<Button-5>", scroll_down)
+        widget2.bind("<Button-4>", scroll_up)
+        widget2.bind("<Button-5>", scroll_down)
+
     def browse_folder(self, var):
         """폴더 선택 대화상자"""
         folder = filedialog.askdirectory()
@@ -562,10 +634,8 @@ class CompareToolApp:
                 right_size = right_info['size'] if right_info else ""
                 right_mtime = right_info['mtime'] if right_info else ""
 
-                item_id = self.folder_tree.insert('', 'end', text=rel_path,
-                                                   values=(status, left_size, left_mtime, right_size, right_mtime))
-                # 아이템에 경로 정보 저장
-                self.folder_tree.set(item_id, '#0', rel_path)
+                self.folder_tree.insert('', 'end', text=rel_path,
+                                        values=(status, left_size, left_mtime, right_size, right_mtime))
 
         messagebox.showinfo("완료", f"비교가 완료되었습니다.\n차이가 있는 파일: {len(self.folder_tree.get_children())}개")
 
@@ -641,6 +711,117 @@ class CompareToolApp:
             messagebox.showinfo("완료", f"{deleted_count}개 파일이 삭제되었습니다.")
             self.compare_folders()
 
+    def on_folder_tree_select(self, event):
+        """폴더 트리뷰에서 파일 선택 시 미리보기 표시"""
+        selected = self.folder_tree.selection()
+        if not selected:
+            return
+
+        # 첫 번째 선택 항목만 처리
+        item = selected[0]
+        rel_path = self.folder_tree.item(item, 'text')
+
+        left_folder = self.left_folder_var.get()
+        right_folder = self.right_folder_var.get()
+
+        if not left_folder or not right_folder:
+            return
+
+        left_path = os.path.join(left_folder, rel_path)
+        right_path = os.path.join(right_folder, rel_path)
+
+        # 미리보기 영역 초기화
+        self.folder_preview_left.config(state='normal')
+        self.folder_preview_right.config(state='normal')
+        self.folder_preview_left.delete('1.0', 'end')
+        self.folder_preview_right.delete('1.0', 'end')
+        self.folder_preview_left.tag_remove('diff', '1.0', 'end')
+        self.folder_preview_right.tag_remove('diff', '1.0', 'end')
+
+        left_content = ""
+        right_content = ""
+
+        # 왼쪽 파일 읽기
+        if os.path.exists(left_path) and os.path.isfile(left_path):
+            try:
+                with open(left_path, 'r', encoding='utf-8') as f:
+                    left_content = f.read()
+                self.folder_preview_left.insert('1.0', left_content)
+            except Exception as e:
+                self.folder_preview_left.insert('1.0', f"[파일을 읽을 수 없습니다]\n{str(e)}")
+        else:
+            self.folder_preview_left.insert('1.0', "[파일이 존재하지 않습니다]")
+
+        # 오른쪽 파일 읽기
+        if os.path.exists(right_path) and os.path.isfile(right_path):
+            try:
+                with open(right_path, 'r', encoding='utf-8') as f:
+                    right_content = f.read()
+                self.folder_preview_right.insert('1.0', right_content)
+            except Exception as e:
+                self.folder_preview_right.insert('1.0', f"[파일을 읽을 수 없습니다]\n{str(e)}")
+        else:
+            self.folder_preview_right.insert('1.0', "[파일이 존재하지 않습니다]")
+
+        # 두 파일이 모두 존재하면 차이점 하이라이트
+        if left_content and right_content:
+            left_lines = left_content.splitlines()
+            right_lines = right_content.splitlines()
+            self.compare_text_detailed(self.folder_preview_left, self.folder_preview_right, left_lines, right_lines)
+
+        self.folder_preview_left.config(state='disabled')
+        self.folder_preview_right.config(state='disabled')
+
+    def highlight_text_diff(self, text_widget, text, line_num, start_col, end_col):
+        """텍스트 위젯의 특정 위치에 diff 태그 추가"""
+        start_pos = f"{line_num}.{start_col}"
+        end_pos = f"{line_num}.{end_col}"
+        text_widget.tag_add('diff', start_pos, end_pos)
+
+    def compare_text_detailed(self, left_widget, right_widget, left_lines, right_lines):
+        """문자 단위로 상세 비교하여 하이라이트"""
+        # 라인 단위 비교
+        matcher = difflib.SequenceMatcher(None, left_lines, right_lines)
+
+        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+            if tag == 'equal':
+                continue
+            elif tag == 'delete':
+                # 왼쪽에만 있는 라인들
+                for i in range(i1, i2):
+                    self.highlight_text_diff(left_widget, left_lines[i], i+1, 0, len(left_lines[i]))
+            elif tag == 'insert':
+                # 오른쪽에만 있는 라인들
+                for j in range(j1, j2):
+                    self.highlight_text_diff(right_widget, right_lines[j], j+1, 0, len(right_lines[j]))
+            elif tag == 'replace':
+                # 변경된 라인들 - 문자 단위로 상세 비교
+                left_block = left_lines[i1:i2]
+                right_block = right_lines[j1:j2]
+
+                # 단일 라인 대 단일 라인 비교인 경우 문자 단위 비교
+                if len(left_block) == 1 and len(right_block) == 1:
+                    left_line = left_block[0]
+                    right_line = right_block[0]
+
+                    # 문자 단위 비교
+                    char_matcher = difflib.SequenceMatcher(None, left_line, right_line)
+
+                    for char_tag, c_i1, c_i2, c_j1, c_j2 in char_matcher.get_opcodes():
+                        if char_tag != 'equal':
+                            # 왼쪽 차이 표시
+                            if char_tag in ('replace', 'delete'):
+                                self.highlight_text_diff(left_widget, left_line, i1+1, c_i1, c_i2)
+                            # 오른쪽 차이 표시
+                            if char_tag in ('replace', 'insert'):
+                                self.highlight_text_diff(right_widget, right_line, j1+1, c_j1, c_j2)
+                else:
+                    # 여러 라인이 변경된 경우 라인 단위로 표시
+                    for i in range(i1, i2):
+                        self.highlight_text_diff(left_widget, left_lines[i], i+1, 0, len(left_lines[i]))
+                    for j in range(j1, j2):
+                        self.highlight_text_diff(right_widget, right_lines[j], j+1, 0, len(right_lines[j]))
+
     def compare_text(self):
         """텍스트 비교"""
         # 태그 제거
@@ -657,26 +838,8 @@ class CompareToolApp:
         left_lines = left_text.splitlines()
         right_lines = right_text.splitlines()
 
-        # difflib로 차이점 찾기
-        diff = difflib.unified_diff(left_lines, right_lines, lineterm='')
-
-        # 차이점 하이라이트
-        matcher = difflib.SequenceMatcher(None, left_lines, right_lines)
-
-        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-            if tag == 'replace' or tag == 'delete':
-                # 왼쪽에서 차이나는 부분
-                for i in range(i1, i2):
-                    start = f"{i+1}.0"
-                    end = f"{i+1}.end"
-                    self.text_left.tag_add('diff', start, end)
-
-            if tag == 'replace' or tag == 'insert':
-                # 오른쪽에서 차이나는 부분
-                for j in range(j1, j2):
-                    start = f"{j+1}.0"
-                    end = f"{j+1}.end"
-                    self.text_right.tag_add('diff', start, end)
+        # 상세 비교 (문자 단위)
+        self.compare_text_detailed(self.text_left, self.text_right, left_lines, right_lines)
 
         messagebox.showinfo("완료", "텍스트 비교가 완료되었습니다.\n차이나는 부분이 연한 붉은색으로 표시됩니다.")
 
@@ -734,24 +897,11 @@ class CompareToolApp:
             self.file_text_left.tag_remove('diff', '1.0', 'end')
             self.file_text_right.tag_remove('diff', '1.0', 'end')
 
-            # 차이점 하이라이트
+            # 차이점 하이라이트 (문자 단위 상세 비교)
             left_lines = left_content.splitlines()
             right_lines = right_content.splitlines()
 
-            matcher = difflib.SequenceMatcher(None, left_lines, right_lines)
-
-            for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-                if tag == 'replace' or tag == 'delete':
-                    for i in range(i1, i2):
-                        start = f"{i+1}.0"
-                        end = f"{i+1}.end"
-                        self.file_text_left.tag_add('diff', start, end)
-
-                if tag == 'replace' or tag == 'insert':
-                    for j in range(j1, j2):
-                        start = f"{j+1}.0"
-                        end = f"{j+1}.end"
-                        self.file_text_right.tag_add('diff', start, end)
+            self.compare_text_detailed(self.file_text_left, self.file_text_right, left_lines, right_lines)
 
             messagebox.showinfo("완료", "파일 비교가 완료되었습니다.\n차이나는 부분이 연한 붉은색으로 표시됩니다.")
 
