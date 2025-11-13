@@ -95,20 +95,22 @@ def on_key_press(event):
     log(f"키 입력: keysym='{event.keysym}', char='{event.char}', state={hex(event.state)}, is_command={is_command}")
 
     # Command 키가 눌린 상태에서 특정 키 조합 감지
-    if is_command:
-        if event.keysym.lower() == 'c':
+    # keysym 대신 char를 사용 (macOS에서 keysym이 '??'로 나옴)
+    if is_command and event.char:
+        key_char = event.char.lower()
+        if key_char == 'c':
             log("  >>> Cmd+C 감지!")
             status.config(text="Cmd+C 감지!", bg='yellow')
             return do_copy()
-        elif event.keysym.lower() == 'v':
+        elif key_char == 'v':
             log("  >>> Cmd+V 감지!")
             status.config(text="Cmd+V 감지!", bg='yellow')
             return do_paste()
-        elif event.keysym.lower() == 'x':
+        elif key_char == 'x':
             log("  >>> Cmd+X 감지!")
             status.config(text="Cmd+X 감지!", bg='yellow')
             return do_cut()
-        elif event.keysym.lower() == 'a':
+        elif key_char == 'a':
             log("  >>> Cmd+A 감지!")
             status.config(text="Cmd+A 감지!", bg='yellow')
             text.tag_add('sel', '1.0', 'end-1c')
