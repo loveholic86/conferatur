@@ -767,11 +767,26 @@ class CompareToolApp:
         system = platform.system()
 
         if system == 'Darwin':  # macOS
-            # macOS는 Command 키 사용
-            widget.bind('<Command-c>', do_copy, add='+')
-            widget.bind('<Command-x>', do_cut, add='+')
-            widget.bind('<Command-v>', do_paste, add='+')
-            widget.bind('<Command-a>', do_select_all, add='+')
+            # macOS에서는 KeyPress 이벤트로 Command 키 조합 감지
+            # (<Command-c> 바인딩이 작동하지 않음)
+            def on_macos_key(event):
+                """macOS Command 키 조합 감지 (state & 0x0008 = Command 키)"""
+                is_command = bool(event.state & 0x0008)
+
+                if is_command and event.char:
+                    key_char = event.char.lower()
+                    if key_char == 'c':
+                        return do_copy(event)
+                    elif key_char == 'x':
+                        return do_cut(event)
+                    elif key_char == 'v':
+                        return do_paste(event)
+                    elif key_char == 'a':
+                        return do_select_all(event)
+                return None
+
+            widget.bind('<KeyPress>', on_macos_key, add='+')
+
         else:  # Windows, Linux
             # Windows/Linux는 Control 키 사용
             widget.bind('<Control-c>', do_copy, add='+')
