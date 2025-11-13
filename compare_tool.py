@@ -1098,37 +1098,70 @@ class CompareToolApp:
         """선택 창 표시"""
         win = tk.Toplevel(self.root)
         win.title(f"{'히스토리' if data_type == 'history' else '즐겨찾기'} 선택")
-        win.geometry("600x400")
+        win.geometry("900x500")
+
+        # 상단 정보 레이블
+        info_frame = ttk.Frame(win)
+        info_frame.pack(fill='x', padx=10, pady=(10, 5))
+
+        info_text = f"{'히스토리' if data_type == 'history' else '즐겨찾기'} 목록 (총 {len(items)}개)"
+        ttk.Label(info_frame, text=info_text, font=('', 11, 'bold')).pack(anchor='w')
 
         # 리스트박스
         frame = ttk.Frame(win)
-        frame.pack(fill='both', expand=True, padx=10, pady=10)
+        frame.pack(fill='both', expand=True, padx=10, pady=5)
 
         scrollbar = ttk.Scrollbar(frame, orient='vertical')
         scrollbar.pack(side='right', fill='y')
 
-        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=('', 10))
+        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set,
+                            font=('Consolas', 11), height=15,
+                            selectmode='single', activestyle='dotbox')
         listbox.pack(fill='both', expand=True)
         scrollbar.config(command=listbox.yview)
 
-        # 항목 추가
-        for item in items:
+        def refresh_list():
+            """목록 새로고침"""
+            listbox.delete(0, 'end')
+            # 현재 데이터 다시 가져오기
             if category == 'folder':
-                if data_type == 'favorite':
-                    display = f"{item['name']}: {item['left']} ↔ {item['right']}"
-                else:
-                    display = f"[{item['timestamp']}] {item['left']} ↔ {item['right']}"
+                current_items = self.data_manager.get_folder_history() if data_type == 'history' else self.data_manager.get_folder_favorites()
             elif category == 'file':
-                if data_type == 'favorite':
-                    display = f"{item['name']}: {item['left']} ↔ {item['right']}"
-                else:
-                    display = f"[{item['timestamp']}] {item['left']} ↔ {item['right']}"
-            else:  # text
-                if data_type == 'favorite':
-                    display = f"{item['name']}: {item['left_preview']} | {item['right_preview']}"
-                else:
-                    display = f"[{item['timestamp']}] {item['left_preview']} | {item['right_preview']}"
-            listbox.insert('end', display)
+                current_items = self.data_manager.get_file_history() if data_type == 'history' else self.data_manager.get_file_favorites()
+            else:
+                current_items = self.data_manager.get_text_history() if data_type == 'history' else self.data_manager.get_text_favorites()
+
+            # 항목 추가
+            for idx, item in enumerate(current_items):
+                if category == 'folder':
+                    if data_type == 'favorite':
+                        display = f"⭐ {item['name']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
+                    else:
+                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
+                elif category == 'file':
+                    if data_type == 'favorite':
+                        display = f"⭐ {item['name']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
+                    else:
+                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
+                else:  # text
+                    if data_type == 'favorite':
+                        display = f"⭐ {item['name']}\n   왼쪽: {item['left_preview']}\n   오른쪽: {item['right_preview']}"
+                    else:
+                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left_preview']}\n   오른쪽: {item['right_preview']}"
+                listbox.insert('end', display)
+                # 구분선 추가
+                if idx < len(current_items) - 1:
+                    listbox.insert('end', '─' * 80)
+
+            # 정보 레이블 업데이트
+            info_text = f"{'히스토리' if data_type == 'history' else '즐겨찾기'} 목록 (총 {len(current_items)}개)"
+            for widget in info_frame.winfo_children():
+                widget.destroy()
+            ttk.Label(info_frame, text=info_text, font=('', 11, 'bold')).pack(anchor='w')
+
+            return current_items
+
+        current_items = refresh_list()
 
         # 버튼
         button_frame = ttk.Frame(win)
@@ -1140,8 +1173,14 @@ class CompareToolApp:
                 messagebox.showwarning("경고", "항목을 선택해주세요.")
                 return
 
+            # 구분선 제외 (홀수 인덱스는 구분선)
             index = selection[0]
-            item = items[index]
+            if index % 2 == 1:  # 구분선 선택
+                messagebox.showwarning("경고", "항목을 선택해주세요. (구분선이 아닌 항목을 선택하세요)")
+                return
+
+            actual_index = index // 2
+            item = current_items[actual_index]
 
             if category == 'folder':
                 self.left_folder_var.set(item['left'])
@@ -1160,7 +1199,31 @@ class CompareToolApp:
             win.destroy()
             messagebox.showinfo("완료", "불러오기 완료!")
 
+        def delete_selected():
+            selection = listbox.curselection()
+            if not selection:
+                messagebox.showwarning("경고", "삭제할 항목을 선택해주세요.")
+                return
+
+            # 구분선 제외
+            index = selection[0]
+            if index % 2 == 1:  # 구분선 선택
+                messagebox.showwarning("경고", "항목을 선택해주세요. (구분선이 아닌 항목을 선택하세요)")
+                return
+
+            actual_index = index // 2
+
+            if messagebox.askyesno("확인", "선택한 항목을 삭제하시겠습니까?"):
+                if data_type == 'history':
+                    self.data_manager.delete_history(category, actual_index)
+                else:
+                    self.data_manager.delete_favorite(category, actual_index)
+
+                nonlocal current_items
+                current_items = refresh_list()
+
         ttk.Button(button_frame, text="불러오기", command=load_selected).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="삭제", command=delete_selected).pack(side='left', padx=5)
         ttk.Button(button_frame, text="취소", command=win.destroy).pack(side='left', padx=5)
 
     def add_to_favorite(self, category):
@@ -1225,16 +1288,25 @@ class CompareToolApp:
         """관리 창 표시"""
         win = tk.Toplevel(self.root)
         win.title(title)
-        win.geometry("800x500")
+        win.geometry("1000x600")
+
+        # 상단 정보 레이블
+        info_frame = ttk.Frame(win)
+        info_frame.pack(fill='x', padx=10, pady=(10, 5))
+
+        info_text = f"{title} (총 {len(items)}개)"
+        ttk.Label(info_frame, text=info_text, font=('', 12, 'bold')).pack(anchor='w')
 
         # 리스트박스
         frame = ttk.Frame(win)
-        frame.pack(fill='both', expand=True, padx=10, pady=10)
+        frame.pack(fill='both', expand=True, padx=10, pady=5)
 
         scrollbar = ttk.Scrollbar(frame, orient='vertical')
         scrollbar.pack(side='right', fill='y')
 
-        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set, font=('', 9))
+        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set,
+                            font=('Consolas', 11), height=20,
+                            selectmode='single', activestyle='dotbox')
         listbox.pack(fill='both', expand=True)
         scrollbar.config(command=listbox.yview)
 
@@ -1245,25 +1317,34 @@ class CompareToolApp:
                             self.data_manager.get_file_favorites() if category == 'file' else \
                             self.data_manager.get_text_favorites())
 
-            for item in current_items:
+            for idx, item in enumerate(current_items):
                 if category == 'folder':
                     # 폴더 경로만 표시
                     if data_type == 'favorite':
-                        display = f"{item['name']}: {item['left']} ↔ {item['right']}"
+                        display = f"⭐ {item['name']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
                     else:
-                        display = f"[{item['timestamp']}] {item['left']} ↔ {item['right']}"
+                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
                 elif category == 'file':
                     # 파일 경로 및 이름만 표시
                     if data_type == 'favorite':
-                        display = f"{item['name']}: {item['left']} ↔ {item['right']}"
+                        display = f"⭐ {item['name']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
                     else:
-                        display = f"[{item['timestamp']}] {item['left']} ↔ {item['right']}"
+                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
                 else:  # text
                     if data_type == 'favorite':
-                        display = f"{item['name']}: {item['left_preview']} | {item['right_preview']}"
+                        display = f"⭐ {item['name']}\n   왼쪽: {item['left_preview']}\n   오른쪽: {item['right_preview']}"
                     else:
-                        display = f"[{item['timestamp']}] {item['left_preview']} | {item['right_preview']}"
+                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left_preview']}\n   오른쪽: {item['right_preview']}"
                 listbox.insert('end', display)
+                # 구분선 추가
+                if idx < len(current_items) - 1:
+                    listbox.insert('end', '─' * 90)
+
+            # 정보 레이블 업데이트
+            info_text = f"{title} (총 {len(current_items)}개)"
+            for widget in info_frame.winfo_children():
+                widget.destroy()
+            ttk.Label(info_frame, text=info_text, font=('', 12, 'bold')).pack(anchor='w')
 
         refresh_list()
 
@@ -1277,12 +1358,19 @@ class CompareToolApp:
                 messagebox.showwarning("경고", "삭제할 항목을 선택해주세요.")
                 return
 
+            # 구분선 제외
+            index = selection[0]
+            if index % 2 == 1:  # 구분선 선택
+                messagebox.showwarning("경고", "항목을 선택해주세요. (구분선이 아닌 항목을 선택하세요)")
+                return
+
+            actual_index = index // 2
+
             if messagebox.askyesno("확인", "선택한 항목을 삭제하시겠습니까?"):
-                index = selection[0]
                 if data_type == 'history':
-                    self.data_manager.delete_history(category, index)
+                    self.data_manager.delete_history(category, actual_index)
                 else:
-                    self.data_manager.delete_favorite(category, index)
+                    self.data_manager.delete_favorite(category, actual_index)
                 refresh_list()
 
         def rename_item():
@@ -1295,10 +1383,17 @@ class CompareToolApp:
                 messagebox.showwarning("경고", "이름을 변경할 항목을 선택해주세요.")
                 return
 
+            # 구분선 제외
+            index = selection[0]
+            if index % 2 == 1:  # 구분선 선택
+                messagebox.showwarning("경고", "항목을 선택해주세요. (구분선이 아닌 항목을 선택하세요)")
+                return
+
+            actual_index = index // 2
+
             new_name = simpledialog.askstring("이름 변경", "새 이름을 입력하세요:")
             if new_name:
-                index = selection[0]
-                self.data_manager.rename_favorite(category, index, new_name)
+                self.data_manager.rename_favorite(category, actual_index, new_name)
                 refresh_list()
 
         ttk.Button(button_frame, text="삭제", command=delete_item).pack(side='left', padx=5)
