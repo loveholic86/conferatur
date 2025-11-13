@@ -53,38 +53,68 @@ if __name__ == '__main__':
     print("\n미리보기 창을 띄웁니다...")
     print("여러 테마를 선택해서 확인해보세요.\n")
 
-    # cerulean 테마로 미리보기
-    root = ttk.Window(themename="cerulean")
-    root.title("ttkbootstrap 미리보기 - cerulean 테마")
-    root.geometry("600x400")
+    # 사용 가능한 테마 확인
+    try:
+        # 기본 Window로 시작
+        root = ttk.Window()
+        available_themes = list(root.style.theme_names())
+        print(f"✓ 실제 사용 가능한 테마 ({len(available_themes)}개):")
+        print(f"  {', '.join(available_themes)}\n")
 
-    # 샘플 위젯들
-    ttk.Label(root, text="📂 파일/폴더 비교 도구", font=("Segoe UI", 16, "bold")).pack(pady=20)
+        # 첫 번째 테마 사용
+        if available_themes:
+            default_theme = available_themes[0]
+            root.style.theme_use(default_theme)
+            print(f"현재 테마: {default_theme}\n")
+        else:
+            default_theme = "default"
 
-    frame = ttk.LabelFrame(root, text="샘플 컨트롤", padding=20)
-    frame.pack(fill='both', expand=True, padx=20, pady=10)
+        root.title(f"ttkbootstrap 미리보기 - {default_theme}")
+        root.geometry("600x450")
 
-    ttk.Label(frame, text="이것이 cerulean 테마입니다").pack(pady=5)
+        # 샘플 위젯들
+        ttk.Label(root, text="📂 파일/폴더 비교 도구", font=("Segoe UI", 16, "bold")).pack(pady=20)
 
-    ttk.Button(frame, text="Primary 버튼", bootstyle="primary").pack(pady=5, fill='x')
-    ttk.Button(frame, text="Success 버튼", bootstyle="success").pack(pady=5, fill='x')
-    ttk.Button(frame, text="Info 버튼", bootstyle="info").pack(pady=5, fill='x')
-    ttk.Button(frame, text="Warning 버튼", bootstyle="warning").pack(pady=5, fill='x')
-    ttk.Button(frame, text="Danger 버튼", bootstyle="danger").pack(pady=5, fill='x')
+        frame = ttk.LabelFrame(root, text="샘플 컨트롤", padding=20)
+        frame.pack(fill='both', expand=True, padx=20, pady=10)
 
-    entry = ttk.Entry(frame)
-    entry.pack(pady=5, fill='x')
-    entry.insert(0, "텍스트 입력 필드")
+        ttk.Label(frame, text=f"현재 적용된 테마: {default_theme}").pack(pady=5)
 
-    # 테마 변경 버튼
-    def change_theme():
-        themes = ['cerulean', 'cosmo', 'flatly', 'minty', 'litera', 'pulse', 'darkly']
-        current = root.style.theme_use()
-        current_idx = themes.index(current) if current in themes else 0
-        next_theme = themes[(current_idx + 1) % len(themes)]
-        root.style.theme_use(next_theme)
-        root.title(f"ttkbootstrap 미리보기 - {next_theme} 테마")
+        ttk.Button(frame, text="Primary 버튼", bootstyle="primary").pack(pady=5, fill='x')
+        ttk.Button(frame, text="Success 버튼", bootstyle="success").pack(pady=5, fill='x')
+        ttk.Button(frame, text="Info 버튼", bootstyle="info").pack(pady=5, fill='x')
+        ttk.Button(frame, text="Warning 버튼", bootstyle="warning").pack(pady=5, fill='x')
+        ttk.Button(frame, text="Danger 버튼", bootstyle="danger").pack(pady=5, fill='x')
 
-    ttk.Button(root, text="🎨 다음 테마 보기", command=change_theme, bootstyle="info-outline").pack(pady=10)
+        entry = ttk.Entry(frame)
+        entry.pack(pady=5, fill='x')
+        entry.insert(0, "텍스트 입력 필드")
 
-    root.mainloop()
+        # 현재 테마 표시 레이블
+        current_theme_label = ttk.Label(root, text=f"현재: {default_theme}", font=("", 11, "bold"))
+        current_theme_label.pack(pady=5)
+
+        # 테마 변경 버튼
+        def change_theme():
+            try:
+                current = root.style.theme_use()
+                current_idx = available_themes.index(current) if current in available_themes else 0
+                next_theme = available_themes[(current_idx + 1) % len(available_themes)]
+                root.style.theme_use(next_theme)
+                root.title(f"ttkbootstrap 미리보기 - {next_theme}")
+                current_theme_label.config(text=f"현재: {next_theme}")
+                frame.config(text=f"샘플 컨트롤 - {next_theme} 테마")
+                print(f"테마 변경: {next_theme}")
+            except Exception as e:
+                print(f"테마 변경 오류: {e}")
+
+        ttk.Button(root, text="🎨 다음 테마 보기", command=change_theme, bootstyle="info-outline").pack(pady=10)
+
+        root.mainloop()
+
+    except Exception as e:
+        print(f"오류 발생: {e}")
+        import traceback
+        traceback.print_exc()
+        import sys
+        sys.exit(1)
