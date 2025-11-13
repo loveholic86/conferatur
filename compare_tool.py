@@ -562,10 +562,8 @@ class CompareToolApp:
                 right_size = right_info['size'] if right_info else ""
                 right_mtime = right_info['mtime'] if right_info else ""
 
-                item_id = self.folder_tree.insert('', 'end', text=rel_path,
-                                                   values=(status, left_size, left_mtime, right_size, right_mtime))
-                # 아이템에 경로 정보 저장
-                self.folder_tree.set(item_id, '#0', rel_path)
+                self.folder_tree.insert('', 'end', text=rel_path,
+                                        values=(status, left_size, left_mtime, right_size, right_mtime))
 
         messagebox.showinfo("완료", f"비교가 완료되었습니다.\n차이가 있는 파일: {len(self.folder_tree.get_children())}개")
 
