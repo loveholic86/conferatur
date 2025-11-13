@@ -183,8 +183,28 @@ class DataManager:
 class CompareToolApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("📂 파일/폴더 비교 도구")
+
+        # OS 감지 (한 번만 수행)
+        import platform
+        self.system = platform.system()
+        self.is_macos = (self.system == 'Darwin')
+        self.is_windows = (self.system == 'Windows')
+        self.is_linux = (self.system == 'Linux')
+
+        # OS별 타이틀 설정
+        os_name = "macOS" if self.is_macos else ("Windows" if self.is_windows else "Linux")
+        self.root.title(f"📂 파일/폴더 비교 도구 [{os_name}]")
         self.root.geometry("1300x850")
+
+        # OS 정보 출력
+        print(f"=== 파일/폴더 비교 도구 시작 ===")
+        print(f"운영체제: {self.system} ({os_name})")
+        if self.is_macos:
+            print(f"키보드 단축키: Cmd+C (복사), Cmd+V (붙여넣기), Cmd+X (잘라내기), Cmd+A (전체선택)")
+        else:
+            print(f"키보드 단축키: Ctrl+C (복사), Ctrl+V (붙여넣기), Ctrl+X (잘라내기), Ctrl+A (전체선택)")
+        print(f"우클릭: 컨텍스트 메뉴")
+        print()
 
         # 색상 테마 정의 (Pastel Blue Theme)
         self.colors = {
@@ -762,11 +782,8 @@ class CompareToolApp:
             widget.see('insert')
             return 'break'
 
-        # OS별 키 바인딩 설정
-        import platform
-        system = platform.system()
-
-        if system == 'Darwin':  # macOS
+        # OS별 키 바인딩 설정 (self.is_macos는 __init__에서 감지됨)
+        if self.is_macos:  # macOS
             # macOS에서는 KeyPress 이벤트로 Command 키 조합 감지
             # (<Command-c> 바인딩이 작동하지 않음)
             def on_macos_key(event):
@@ -803,7 +820,7 @@ class CompareToolApp:
         context_menu = tk.Menu(widget, tearoff=0)
 
         # OS에 따른 단축키 표시 텍스트
-        key_modifier = "Cmd" if system == 'Darwin' else "Ctrl"
+        key_modifier = "Cmd" if self.is_macos else "Ctrl"
 
         def show_context_menu(event):
             """우클릭 시 컨텍스트 메뉴 표시"""
@@ -822,7 +839,12 @@ class CompareToolApp:
             finally:
                 context_menu.grab_release()
 
+        # 우클릭 이벤트 바인딩
         widget.bind('<Button-3>', show_context_menu, add='+')
+        if self.is_macos:
+            # macOS는 여러 방식의 우클릭 지원
+            widget.bind('<Button-2>', show_context_menu, add='+')
+            widget.bind('<Control-Button-1>', show_context_menu, add='+')
 
     def setup_scroll_sync(self, widget1, widget2):
         """두 텍스트 위젯의 스크롤 동기화"""
