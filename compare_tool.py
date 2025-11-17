@@ -243,6 +243,10 @@ class CompareToolApp:
         self.font_family = font_settings['family']
         self.font_size = font_settings['size']
 
+        # 파일 비교 차이점 블록 정보 저장
+        self.file_diff_blocks = []  # 파일 비교 모드의 차이점 블록 정보
+        self.text_diff_blocks = []  # 텍스트 비교 모드의 차이점 블록 정보
+
         # 메뉴바 생성
         self.create_menubar()
 
@@ -555,6 +559,8 @@ class CompareToolApp:
         button_frame = ttk.Frame(control_frame)
         button_frame.grid(row=3, column=0, columnspan=3, pady=10)
         ttk.Button(button_frame, text="▶ 비교하기", command=self.compare_files, bootstyle='primary').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="◀ 왼쪽으로 복사", command=self.copy_diff_to_left, bootstyle='warning').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="오른쪽으로 복사 ▶", command=self.copy_diff_to_right, bootstyle='warning').pack(side='left', padx=5)
         ttk.Button(button_frame, text="💾 왼쪽 파일 저장", command=lambda: self.save_file('left'), bootstyle='success').pack(side='left', padx=5)
         ttk.Button(button_frame, text="💾 오른쪽 파일 저장", command=lambda: self.save_file('right'), bootstyle='success').pack(side='left', padx=5)
         ttk.Button(button_frame, text="🔄 초기화", command=self.clear_file_comparison).pack(side='left', padx=5)
@@ -597,9 +603,9 @@ class CompareToolApp:
                                         foreground='#ff6b6b',
                                         font=(self.font_family, self.font_size, 'bold'))
 
-        # 복사/붙여넣기 기능 활성화
-        self.enable_clipboard_operations(self.file_text_left)
-        self.enable_clipboard_operations(self.file_text_right)
+        # 복사/붙여넣기 및 차이점 복사 기능 활성화
+        self.enable_file_compare_context_menu(self.file_text_left, is_left=True)
+        self.enable_file_compare_context_menu(self.file_text_right, is_left=False)
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.file_text_left, self.file_text_right)
@@ -726,6 +732,98 @@ class CompareToolApp:
             # macOS는 여러 방식의 우클릭 지원
             widget.bind('<Button-2>', show_context_menu, add='+')
             widget.bind('<Control-Button-1>', show_context_menu, add='+')
+
+    def enable_file_compare_context_menu(self, widget, is_left):
+        """파일 비교 텍스트 위젯에 차이점 복사 기능이 포함된 컨텍스트 메뉴 추가
+
+        Args:
+            widget: 텍스트 위젯 (file_text_left 또는 file_text_right)
+            is_left: 왼쪽 위젯인지 여부
+        """
+        # 기본 클립보드 기능을 먼저 활성화 (키보드 바인딩 포함)
+        self.enable_clipboard_operations(widget)
+
+        # 차이점 복사 기능이 추가된 컨텍스트 메뉴
+        context_menu = tk.Menu(widget, tearoff=0)
+        key_modifier = "Cmd" if self.is_macos else "Ctrl"
+
+        # 기본 클립보드 함수들 재정의
+        def do_copy(event=None):
+            try:
+                widget.event_generate("<<Copy>>")
+            except:
+                if widget.tag_ranges('sel'):
+                    widget.clipboard_clear()
+                    text = widget.get('sel.first', 'sel.last')
+                    widget.clipboard_append(text)
+            return "break"
+
+        def do_cut(event=None):
+            try:
+                widget.event_generate("<<Cut>>")
+            except:
+                if widget.tag_ranges('sel'):
+                    widget.clipboard_clear()
+                    text = widget.get('sel.first', 'sel.last')
+                    widget.clipboard_append(text)
+                    widget.delete('sel.first', 'sel.last')
+            return "break"
+
+        def do_paste(event=None):
+            try:
+                widget.event_generate("<<Paste>>")
+            except:
+                if widget.tag_ranges('sel'):
+                    widget.delete('sel.first', 'sel.last')
+                text = widget.clipboard_get()
+                widget.insert('insert', text)
+            return "break"
+
+        def do_select_all(event=None):
+            widget.tag_add('sel', "1.0", "end-1c")
+            widget.mark_set('insert', "1.0")
+            widget.see('insert')
+            return 'break'
+
+        def show_file_compare_context_menu(event):
+            """파일 비교용 컨텍스트 메뉴 표시"""
+            context_menu.delete(0, tk.END)
+
+            # 기본 클립보드 작업
+            context_menu.add_command(label=f"복사 ({key_modifier}+C)", command=do_copy)
+            context_menu.add_command(label=f"잘라내기 ({key_modifier}+X)", command=do_cut)
+            context_menu.add_command(label=f"붙여넣기 ({key_modifier}+V)", command=do_paste)
+            context_menu.add_separator()
+            context_menu.add_command(label=f"전체 선택 ({key_modifier}+A)", command=do_select_all)
+
+            # 차이점이 있을 때만 복사 메뉴 추가
+            if len(self.file_diff_blocks) > 0:
+                context_menu.add_separator()
+                if is_left:
+                    context_menu.add_command(label="◀ 왼쪽으로 복사 (현재 블록)",
+                                           command=self.copy_diff_to_left)
+                    context_menu.add_command(label="오른쪽으로 복사 ▶ (현재 블록)",
+                                           command=self.copy_diff_to_right)
+                else:
+                    context_menu.add_command(label="◀ 왼쪽으로 복사 (현재 블록)",
+                                           command=self.copy_diff_to_left)
+                    context_menu.add_command(label="오른쪽으로 복사 ▶ (현재 블록)",
+                                           command=self.copy_diff_to_right)
+
+            try:
+                context_menu.tk_popup(event.x_root, event.y_root, 0)
+            finally:
+                context_menu.grab_release()
+
+        # 우클릭 이벤트 바인딩 (기존 바인딩 덮어쓰기)
+        # enable_clipboard_operations에서 이미 바인딩했으므로, 이를 제거하고 새로 바인딩
+        widget.unbind('<Button-3>')
+        widget.bind('<Button-3>', show_file_compare_context_menu)
+        if self.is_macos:
+            widget.unbind('<Button-2>')
+            widget.unbind('<Control-Button-1>')
+            widget.bind('<Button-2>', show_file_compare_context_menu)
+            widget.bind('<Control-Button-1>', show_file_compare_context_menu)
 
     def setup_scroll_sync(self, widget1, widget2):
         """두 텍스트 위젯의 스크롤 동기화"""
@@ -1247,15 +1345,42 @@ class CompareToolApp:
         end_pos = f"{line_num}.{end_col}"
         text_widget.tag_add('diff', start_pos, end_pos)
 
-    def compare_text_detailed(self, left_widget, right_widget, left_lines, right_lines):
-        """문자 단위로 상세 비교하여 하이라이트"""
+    def compare_text_detailed(self, left_widget, right_widget, left_lines, right_lines, store_blocks=False, blocks_list=None):
+        """문자 단위로 상세 비교하여 하이라이트
+
+        Args:
+            left_widget: 왼쪽 텍스트 위젯
+            right_widget: 오른쪽 텍스트 위젯
+            left_lines: 왼쪽 텍스트 라인 리스트
+            right_lines: 오른쪽 텍스트 라인 리스트
+            store_blocks: 차이점 블록 정보를 저장할지 여부
+            blocks_list: 블록 정보를 저장할 리스트
+        """
+        # 블록 정보 저장이 필요한 경우 초기화
+        if store_blocks and blocks_list is not None:
+            blocks_list.clear()
+
         # 라인 단위 비교
         matcher = difflib.SequenceMatcher(None, left_lines, right_lines)
 
         for tag, i1, i2, j1, j2 in matcher.get_opcodes():
             if tag == 'equal':
                 continue
-            elif tag == 'delete':
+
+            # 블록 정보 저장
+            if store_blocks and blocks_list is not None:
+                block_info = {
+                    'tag': tag,
+                    'left_start': i1 + 1,  # 1-based line number
+                    'left_end': i2,         # exclusive
+                    'right_start': j1 + 1,  # 1-based line number
+                    'right_end': j2,        # exclusive
+                    'left_lines': left_lines[i1:i2],
+                    'right_lines': right_lines[j1:j2]
+                }
+                blocks_list.append(block_info)
+
+            if tag == 'delete':
                 # 왼쪽에만 있는 라인들
                 for i in range(i1, i2):
                     self.highlight_text_diff(left_widget, left_lines[i], i+1, 0, len(left_lines[i]))
@@ -1387,11 +1512,12 @@ class CompareToolApp:
             self.file_text_left.tag_remove('diff', '1.0', 'end')
             self.file_text_right.tag_remove('diff', '1.0', 'end')
 
-            # 차이점 하이라이트 (문자 단위 상세 비교)
+            # 차이점 하이라이트 (문자 단위 상세 비교) 및 블록 정보 저장
             left_lines = left_content.splitlines()
             right_lines = right_content.splitlines()
 
-            self.compare_text_detailed(self.file_text_left, self.file_text_right, left_lines, right_lines)
+            self.compare_text_detailed(self.file_text_left, self.file_text_right, left_lines, right_lines,
+                                      store_blocks=True, blocks_list=self.file_diff_blocks)
 
             messagebox.showinfo("완료", "파일 비교가 완료되었습니다.\n차이나는 부분이 연한 붉은색으로 표시됩니다.")
 
@@ -1417,6 +1543,113 @@ class CompareToolApp:
             messagebox.showinfo("완료", "파일이 저장되었습니다.")
         except Exception as e:
             messagebox.showerror("오류", f"파일 저장 실패:\n{str(e)}")
+
+    def find_diff_block_at_cursor(self, widget, blocks_list):
+        """커서 위치에서 차이점 블록 찾기
+
+        Args:
+            widget: 텍스트 위젯 (file_text_left 또는 file_text_right)
+            blocks_list: 차이점 블록 리스트 (file_diff_blocks 또는 text_diff_blocks)
+
+        Returns:
+            찾은 블록 정보 딕셔너리, 없으면 None
+        """
+        # 현재 커서 위치 가져오기
+        cursor_pos = widget.index('insert')
+        line_num = int(cursor_pos.split('.')[0])
+
+        # 왼쪽인지 오른쪽인지 확인
+        is_left = (widget == self.file_text_left or widget == self.text_left)
+
+        # 해당 라인이 포함된 블록 찾기
+        for block in blocks_list:
+            if is_left:
+                if block['left_start'] <= line_num < block['left_start'] + len(block['left_lines']):
+                    return block
+            else:
+                if block['right_start'] <= line_num < block['right_start'] + len(block['right_lines']):
+                    return block
+
+        return None
+
+    def copy_diff_to_right(self):
+        """현재 커서 위치의 차이점 블록을 왼쪽에서 오른쪽으로 복사"""
+        block = self.find_diff_block_at_cursor(self.file_text_left, self.file_diff_blocks)
+
+        if not block:
+            messagebox.showwarning("알림", "커서가 차이점 블록 위에 있지 않습니다.")
+            return
+
+        # 오른쪽 텍스트에서 해당 블록 범위 삭제 후 왼쪽 내용 삽입
+        left_content = '\n'.join(block['left_lines'])
+
+        # 오른쪽에서 해당 라인 범위 찾기
+        if block['tag'] == 'delete':
+            # 왼쪽에만 있는 경우 - 오른쪽의 해당 위치에 삽입
+            insert_pos = f"{block['right_start']}.0"
+            self.file_text_right.insert(insert_pos, left_content + '\n')
+        elif block['tag'] == 'insert':
+            # 오른쪽에만 있는 경우 - 오른쪽 블록 삭제
+            start_pos = f"{block['right_start']}.0"
+            end_pos = f"{block['right_start'] + len(block['right_lines'])}.0"
+            self.file_text_right.delete(start_pos, end_pos)
+        else:  # replace
+            # 양쪽 모두 있는 경우 - 오른쪽 내용을 왼쪽 내용으로 교체
+            start_pos = f"{block['right_start']}.0"
+            end_pos = f"{block['right_start'] + len(block['right_lines'])}.0"
+            self.file_text_right.delete(start_pos, end_pos)
+            self.file_text_right.insert(start_pos, left_content + '\n')
+
+        # 비교 재실행 (하이라이트 업데이트)
+        self.recompare_files()
+
+    def copy_diff_to_left(self):
+        """현재 커서 위치의 차이점 블록을 오른쪽에서 왼쪽으로 복사"""
+        block = self.find_diff_block_at_cursor(self.file_text_right, self.file_diff_blocks)
+
+        if not block:
+            messagebox.showwarning("알림", "커서가 차이점 블록 위에 있지 않습니다.")
+            return
+
+        # 왼쪽 텍스트에서 해당 블록 범위 삭제 후 오른쪽 내용 삽입
+        right_content = '\n'.join(block['right_lines'])
+
+        # 왼쪽에서 해당 라인 범위 찾기
+        if block['tag'] == 'insert':
+            # 오른쪽에만 있는 경우 - 왼쪽의 해당 위치에 삽입
+            insert_pos = f"{block['left_start']}.0"
+            self.file_text_left.insert(insert_pos, right_content + '\n')
+        elif block['tag'] == 'delete':
+            # 왼쪽에만 있는 경우 - 왼쪽 블록 삭제
+            start_pos = f"{block['left_start']}.0"
+            end_pos = f"{block['left_start'] + len(block['left_lines'])}.0"
+            self.file_text_left.delete(start_pos, end_pos)
+        else:  # replace
+            # 양쪽 모두 있는 경우 - 왼쪽 내용을 오른쪽 내용으로 교체
+            start_pos = f"{block['left_start']}.0"
+            end_pos = f"{block['left_start'] + len(block['left_lines'])}.0"
+            self.file_text_left.delete(start_pos, end_pos)
+            self.file_text_left.insert(start_pos, right_content + '\n')
+
+        # 비교 재실행 (하이라이트 업데이트)
+        self.recompare_files()
+
+    def recompare_files(self):
+        """파일 비교 재실행 (하이라이트 업데이트용)"""
+        # 태그 제거
+        self.file_text_left.tag_remove('diff', '1.0', 'end')
+        self.file_text_right.tag_remove('diff', '1.0', 'end')
+
+        # 현재 내용 가져오기
+        left_content = self.file_text_left.get('1.0', 'end-1c')
+        right_content = self.file_text_right.get('1.0', 'end-1c')
+
+        # 차이점 하이라이트 및 블록 정보 업데이트
+        left_lines = left_content.splitlines()
+        right_lines = right_content.splitlines()
+
+        self.compare_text_detailed(self.file_text_left, self.file_text_right, left_lines, right_lines,
+                                  store_blocks=True, blocks_list=self.file_diff_blocks)
 
     # 히스토리 및 즐겨찾기 관련 메서드
     def load_from_history(self, category):
