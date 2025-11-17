@@ -1649,8 +1649,8 @@ class CompareToolApp:
         """폰트 설정 대화상자"""
         win = tk.Toplevel(self.root)
         win.title("폰트 설정")
-        win.geometry("400x250")
-        win.resizable(False, False)
+        win.geometry("500x380")
+        win.resizable(True, True)
 
         # 중앙에 배치
         win.transient(self.root)
