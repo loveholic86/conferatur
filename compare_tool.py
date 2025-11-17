@@ -375,6 +375,25 @@ class CompareToolApp:
         # 트리뷰 선택 이벤트 바인딩
         self.folder_tree.bind('<<TreeviewSelect>>', self.on_folder_tree_select)
 
+        # 컨텍스트 메뉴 생성
+        self.folder_tree_context_menu = tk.Menu(self.folder_tree, tearoff=0)
+        self.folder_tree_context_menu.add_command(
+            label="📤 왼쪽 → 오른쪽 복사",
+            command=lambda: self.copy_file('left_to_right')
+        )
+        self.folder_tree_context_menu.add_command(
+            label="📥 오른쪽 → 왼쪽 복사",
+            command=lambda: self.copy_file('right_to_left')
+        )
+        self.folder_tree_context_menu.add_separator()
+        self.folder_tree_context_menu.add_command(
+            label="🗑️ 선택 항목 삭제",
+            command=self.delete_selected
+        )
+
+        # 우클릭 이벤트 바인딩
+        self.folder_tree.bind('<Button-3>', self.show_folder_tree_context_menu)
+
         # 버튼 영역
         button_frame = ttk.Frame(result_frame)
         button_frame.pack(fill='x', pady=5)
@@ -1133,6 +1152,20 @@ class CompareToolApp:
         if deleted_count > 0:
             messagebox.showinfo("완료", f"{deleted_count}개 파일이 삭제되었습니다.")
             self.compare_folders()
+
+    def show_folder_tree_context_menu(self, event):
+        """폴더 트리 우클릭 시 컨텍스트 메뉴 표시"""
+        # 우클릭한 위치의 아이템 선택
+        item = self.folder_tree.identify_row(event.y)
+        if item:
+            # 이미 선택된 항목이 아니면 선택
+            if item not in self.folder_tree.selection():
+                self.folder_tree.selection_set(item)
+            # 컨텍스트 메뉴 표시
+            try:
+                self.folder_tree_context_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                self.folder_tree_context_menu.grab_release()
 
     def on_folder_tree_select(self, event):
         """폴더 트리뷰에서 파일 선택 시 미리보기 표시"""
