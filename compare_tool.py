@@ -1695,7 +1695,7 @@ class CompareToolApp:
         size_spinbox.pack(side='left', padx=5)
 
         # 미리보기
-        preview_frame = ttk.LabelFrame(main_frame, text="미리보기", padding=10)
+        preview_frame = ttk.Labelframe(main_frame, text="미리보기", padding=10)
         preview_frame.pack(fill='x', expand=False, pady=10)
 
         preview_text = tk.Text(preview_frame, height=3, wrap='none')
