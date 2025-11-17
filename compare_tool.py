@@ -1838,7 +1838,7 @@ class CompareToolApp:
         """제외 패턴 설정 다이얼로그 열기"""
         dialog = tk.Toplevel(self.root)
         dialog.title("폴더 비교 제외 패턴 설정")
-        dialog.geometry("700x500")
+        dialog.geometry("800x650")
 
         # 상단 설명
         info_frame = ttk.Frame(dialog)
