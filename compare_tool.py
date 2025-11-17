@@ -1696,10 +1696,10 @@ class CompareToolApp:
 
         # 미리보기
         preview_frame = ttk.LabelFrame(main_frame, text="미리보기", padding=10)
-        preview_frame.pack(fill='both', expand=True, pady=10)
+        preview_frame.pack(fill='x', expand=False, pady=10)
 
         preview_text = tk.Text(preview_frame, height=3, wrap='none')
-        preview_text.pack(fill='both', expand=True)
+        preview_text.pack(fill='both', expand=False)
         preview_text.insert('1.0', "The quick brown fox jumps over the lazy dog\n빠른 갈색 여우가 게으른 개를 뛰어넘습니다\n0123456789")
 
         def update_preview(*args):
