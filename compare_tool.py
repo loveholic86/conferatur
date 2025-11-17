@@ -17,6 +17,7 @@ import hashlib
 import difflib
 import shutil
 import json
+import fnmatch
 from datetime import datetime
 from pathlib import Path
 
@@ -41,7 +42,8 @@ class DataManager:
             'file_history': [],
             'file_favorites': [],
             'font_family': 'Consolas',  # 기본 폰트
-            'font_size': 10              # 기본 폰트 크기
+            'font_size': 10,             # 기본 폰트 크기
+            'exclude_patterns': []       # 폴더 비교 제외 패턴
         }
 
         self.load()
@@ -196,6 +198,15 @@ class DataManager:
         self.data['font_size'] = size
         self.save()
 
+    def get_exclude_patterns(self):
+        """제외 패턴 가져오기"""
+        return self.data.get('exclude_patterns', [])
+
+    def set_exclude_patterns(self, patterns):
+        """제외 패턴 저장"""
+        self.data['exclude_patterns'] = patterns
+        self.save()
+
 
 class CompareToolApp:
     def __init__(self, root):
@@ -319,6 +330,7 @@ class CompareToolApp:
         ttk.Radiobutton(option_frame, text="🔍📅 MD5 + 날짜", variable=self.compare_method_var, value="both").pack(side='left', padx=10)
 
         ttk.Button(option_frame, text="▶ 비교 시작", command=self.compare_folders, bootstyle='primary').pack(side='left', padx=20)
+        ttk.Button(option_frame, text="⚙️ 제외 패턴", command=self.open_exclude_patterns_dialog, bootstyle='info').pack(side='left', padx=5)
         ttk.Button(option_frame, text="🔄 초기화", command=self.clear_folder_comparison).pack(side='left', padx=5)
 
         # 결과 영역
@@ -806,6 +818,47 @@ class CompareToolApp:
         except Exception as e:
             return None
 
+    def should_exclude(self, rel_path, patterns):
+        """제외 패턴에 매칭되는지 확인"""
+        if not patterns:
+            return False
+
+        # 경로를 정규화 (슬래시로 통일)
+        normalized_path = rel_path.replace(os.sep, '/')
+
+        for pattern in patterns:
+            # 패턴도 슬래시로 통일
+            normalized_pattern = pattern.replace(os.sep, '/')
+
+            # 폴더 패턴 (끝에 /가 있는 경우)
+            if normalized_pattern.endswith('/'):
+                # 폴더 이름이나 경로가 매칭되는지 확인
+                folder_pattern = normalized_pattern.rstrip('/')
+                # 경로의 일부분이 폴더 패턴과 매칭되는지 확인
+                path_parts = normalized_path.split('/')
+                for part in path_parts[:-1]:  # 마지막 부분(파일명)을 제외한 모든 폴더
+                    if fnmatch.fnmatch(part, folder_pattern):
+                        return True
+                # 전체 경로가 폴더 패턴으로 시작하는지 확인
+                if normalized_path.startswith(folder_pattern + '/'):
+                    return True
+            else:
+                # 파일 패턴
+                # 전체 경로 매칭
+                if fnmatch.fnmatch(normalized_path, normalized_pattern):
+                    return True
+                # 파일 이름만 매칭
+                filename = os.path.basename(normalized_path)
+                if fnmatch.fnmatch(filename, normalized_pattern):
+                    return True
+                # 경로의 일부분이 매칭되는지 확인
+                path_parts = normalized_path.split('/')
+                for part in path_parts:
+                    if fnmatch.fnmatch(part, normalized_pattern):
+                        return True
+
+        return False
+
     def compare_folders(self):
         """폴더 비교 실행"""
         left_folder = self.left_folder_var.get()
@@ -828,20 +881,36 @@ class CompareToolApp:
 
         compare_method = self.compare_method_var.get()
 
+        # 제외 패턴 가져오기
+        exclude_patterns = self.data_manager.get_exclude_patterns()
+
         # 파일 목록 수집
         left_files = {}
         right_files = {}
+        excluded_files = set()  # 제외된 파일의 고유 경로 추적
 
         for root, dirs, files in os.walk(left_folder):
             for file in files:
                 full_path = os.path.join(root, file)
                 rel_path = os.path.relpath(full_path, left_folder)
+
+                # 제외 패턴 확인
+                if self.should_exclude(rel_path, exclude_patterns):
+                    excluded_files.add(rel_path)
+                    continue
+
                 left_files[rel_path] = full_path
 
         for root, dirs, files in os.walk(right_folder):
             for file in files:
                 full_path = os.path.join(root, file)
                 rel_path = os.path.relpath(full_path, right_folder)
+
+                # 제외 패턴 확인
+                if self.should_exclude(rel_path, exclude_patterns):
+                    excluded_files.add(rel_path)
+                    continue
+
                 right_files[rel_path] = full_path
 
         # 모든 파일 경로 합치기
@@ -939,7 +1008,11 @@ class CompareToolApp:
                     self.folder_tree.insert('', 'end', text=rel_path,
                                             values=(status, left_size, left_mtime, right_size, right_mtime))
 
-        messagebox.showinfo("완료", f"비교가 완료되었습니다.\n차이가 있는 파일: {diff_count}개")
+        # 완료 메시지
+        message = f"비교가 완료되었습니다.\n차이가 있는 파일: {diff_count}개"
+        if len(excluded_files) > 0:
+            message += f"\n제외된 파일: {len(excluded_files)}개"
+        messagebox.showinfo("완료", message)
 
     def copy_file(self, direction):
         """파일 복사 (폴더 선택 시 하위 모든 파일 복사)"""
@@ -1760,6 +1833,86 @@ class CompareToolApp:
         if hasattr(self, 'file_text_right'):
             self.file_text_right.config(font=normal_font)
             self.file_text_right.tag_config('diff', font=bold_font)
+
+    def open_exclude_patterns_dialog(self):
+        """제외 패턴 설정 다이얼로그 열기"""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("폴더 비교 제외 패턴 설정")
+        dialog.geometry("700x500")
+
+        # 상단 설명
+        info_frame = ttk.Frame(dialog)
+        info_frame.pack(fill='x', padx=10, pady=10)
+
+        info_text = """제외할 파일이나 폴더 패턴을 입력하세요 (.gitignore 형식)
+• 한 줄에 하나의 패턴을 입력합니다
+• # 으로 시작하는 줄은 주석으로 처리됩니다
+• 예시: node_modules/, *.pyc, __pycache__/, .git/, *.log"""
+
+        ttk.Label(info_frame, text=info_text, font=('', 9), justify='left').pack(anchor='w')
+
+        # 텍스트 영역
+        text_frame = ttk.Frame(dialog)
+        text_frame.pack(fill='both', expand=True, padx=10, pady=5)
+
+        scrollbar = ttk.Scrollbar(text_frame, orient='vertical')
+        scrollbar.pack(side='right', fill='y')
+
+        text_widget = tk.Text(text_frame, wrap='none', yscrollcommand=scrollbar.set,
+                              font=(self.font_family, self.font_size),
+                              bg='white', fg='#333', relief='solid', borderwidth=1)
+        text_widget.pack(fill='both', expand=True)
+        scrollbar.config(command=text_widget.yview)
+
+        # 기존 패턴 로드
+        patterns = self.data_manager.get_exclude_patterns()
+        if patterns:
+            text_widget.insert('1.0', '\n'.join(patterns))
+        else:
+            # 기본 패턴 예시
+            default_patterns = [
+                "# 일반적으로 제외되는 폴더/파일 예시",
+                "# node_modules/",
+                "# .git/",
+                "# __pycache__/",
+                "# *.pyc",
+                "# .DS_Store",
+                "# Thumbs.db"
+            ]
+            text_widget.insert('1.0', '\n'.join(default_patterns))
+
+        # 버튼 영역
+        button_frame = ttk.Frame(dialog)
+        button_frame.pack(fill='x', padx=10, pady=10)
+
+        def save_patterns():
+            """패턴 저장"""
+            content = text_widget.get('1.0', 'end-1c')
+            lines = content.split('\n')
+
+            # 빈 줄과 주석 제거, 앞뒤 공백 제거
+            patterns = []
+            for line in lines:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    patterns.append(line)
+
+            self.data_manager.set_exclude_patterns(patterns)
+            messagebox.showinfo("성공", f"{len(patterns)}개의 제외 패턴이 저장되었습니다.")
+            dialog.destroy()
+
+        def clear_patterns():
+            """패턴 초기화"""
+            if messagebox.askyesno("확인", "모든 제외 패턴을 삭제하시겠습니까?"):
+                text_widget.delete('1.0', 'end')
+
+        ttk.Button(button_frame, text="💾 저장", command=save_patterns, bootstyle='success').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="🗑️ 초기화", command=clear_patterns, bootstyle='warning').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="❌ 취소", command=dialog.destroy).pack(side='left', padx=5)
+
+        # 다이얼로그를 모달로 만들기
+        dialog.transient(self.root)
+        dialog.grab_set()
 
 
 def main():
