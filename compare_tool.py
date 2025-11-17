@@ -729,6 +729,23 @@ class CompareToolApp:
 
         return os.path.join(*path_parts) if path_parts else ""
 
+    def get_all_files_from_tree_item(self, item):
+        """트리 아이템(폴더 포함)에서 모든 파일 아이템을 재귀적으로 가져오기"""
+        file_items = []
+
+        # 현재 아이템이 파일인지 폴더인지 확인
+        item_values = self.folder_tree.item(item, 'values')
+
+        if item_values and item_values[0]:  # 상태가 있으면 파일
+            file_items.append(item)
+        else:  # 폴더인 경우
+            # 자식 아이템들을 재귀적으로 처리
+            children = self.folder_tree.get_children(item)
+            for child in children:
+                file_items.extend(self.get_all_files_from_tree_item(child))
+
+        return file_items
+
     def browse_folder(self, var):
         """폴더 선택 대화상자"""
         folder = filedialog.askdirectory()
@@ -900,10 +917,10 @@ class CompareToolApp:
         messagebox.showinfo("완료", f"비교가 완료되었습니다.\n차이가 있는 파일: {diff_count}개")
 
     def copy_file(self, direction):
-        """파일 복사"""
+        """파일 복사 (폴더 선택 시 하위 모든 파일 복사)"""
         selected = self.folder_tree.selection()
         if not selected:
-            messagebox.showwarning("경고", "복사할 파일을 선택해주세요.")
+            messagebox.showwarning("경고", "복사할 파일 또는 폴더를 선택해주세요.")
             return
 
         left_folder = self.left_folder_var.get()
@@ -911,13 +928,29 @@ class CompareToolApp:
 
         copied_count = 0
         error_count = 0
+        error_messages = []
 
+        # 선택된 모든 항목에서 파일 수집 (폴더인 경우 하위 파일 모두 수집)
+        all_file_items = []
         for item in selected:
-            # 폴더 노드는 스킵
-            item_values = self.folder_tree.item(item, 'values')
-            if not item_values or not item_values[0]:  # 상태가 없으면 폴더
-                continue
+            files = self.get_all_files_from_tree_item(item)
+            all_file_items.extend(files)
 
+        # 중복 제거
+        all_file_items = list(set(all_file_items))
+
+        if not all_file_items:
+            messagebox.showwarning("경고", "복사할 파일이 없습니다.")
+            return
+
+        # 확인 메시지
+        if len(all_file_items) > 1:
+            direction_text = "왼쪽에서 오른쪽으로" if direction == 'left_to_right' else "오른쪽에서 왼쪽으로"
+            if not messagebox.askyesno("확인", f"{len(all_file_items)}개의 파일을 {direction_text} 복사하시겠습니까?"):
+                return
+
+        # 파일 복사
+        for item in all_file_items:
             rel_path = self.get_tree_item_path(item)
             left_path = os.path.join(left_folder, rel_path)
             right_path = os.path.join(right_folder, rel_path)
@@ -935,12 +968,23 @@ class CompareToolApp:
                         copied_count += 1
             except Exception as e:
                 error_count += 1
-                messagebox.showerror("오류", f"파일 복사 실패: {rel_path}\n{str(e)}")
+                error_messages.append(f"{rel_path}: {str(e)}")
+
+        # 결과 메시지
+        result_msg = f"{copied_count}개 파일이 복사되었습니다."
+        if error_count > 0:
+            result_msg += f"\n{error_count}개 파일 복사 실패."
+            if len(error_messages) <= 5:
+                result_msg += "\n\n실패한 파일:\n" + "\n".join(error_messages)
+            else:
+                result_msg += "\n\n실패한 파일:\n" + "\n".join(error_messages[:5]) + f"\n... 외 {len(error_messages)-5}개"
 
         if copied_count > 0:
-            messagebox.showinfo("완료", f"{copied_count}개 파일이 복사되었습니다.")
+            messagebox.showinfo("완료", result_msg)
             # 비교 다시 실행
             self.compare_folders()
+        elif error_count > 0:
+            messagebox.showerror("오류", result_msg)
 
     def delete_selected(self):
         """선택한 항목 삭제"""
