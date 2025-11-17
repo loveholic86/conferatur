@@ -315,14 +315,19 @@ class CompareToolApp:
         # 왼쪽 폴더 선택
         ttk.Label(control_frame, text="왼쪽 폴더:").grid(row=1, column=0, sticky='w', padx=5, pady=5)
         self.left_folder_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.left_folder_var, width=50).grid(row=1, column=1, padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_folder(self.left_folder_var)).grid(row=1, column=2, padx=5, pady=5)
+        self.left_folder_entry = ttk.Entry(control_frame, textvariable=self.left_folder_var)
+        self.left_folder_entry.grid(row=1, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_folder(self.left_folder_var, self.left_folder_entry)).grid(row=1, column=2, padx=5, pady=5)
 
         # 오른쪽 폴더 선택
         ttk.Label(control_frame, text="오른쪽 폴더:").grid(row=2, column=0, sticky='w', padx=5, pady=5)
         self.right_folder_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.right_folder_var, width=50).grid(row=2, column=1, padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_folder(self.right_folder_var)).grid(row=2, column=2, padx=5, pady=5)
+        self.right_folder_entry = ttk.Entry(control_frame, textvariable=self.right_folder_var)
+        self.right_folder_entry.grid(row=2, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_folder(self.right_folder_var, self.right_folder_entry)).grid(row=2, column=2, padx=5, pady=5)
+
+        # Entry 위젯이 확장되도록 column 1에 weight 설정
+        control_frame.columnconfigure(1, weight=1)
 
         # 비교 옵션
         option_frame = ttk.Frame(control_frame)
@@ -546,14 +551,19 @@ class CompareToolApp:
         # 왼쪽 파일 선택
         ttk.Label(control_frame, text="왼쪽 파일:").grid(row=1, column=0, sticky='w', padx=5, pady=5)
         self.file_left_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.file_left_var, width=50).grid(row=1, column=1, padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_file(self.file_left_var)).grid(row=1, column=2, padx=5, pady=5)
+        self.file_left_entry = ttk.Entry(control_frame, textvariable=self.file_left_var)
+        self.file_left_entry.grid(row=1, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_file(self.file_left_var, self.file_left_entry)).grid(row=1, column=2, padx=5, pady=5)
 
         # 오른쪽 파일 선택
         ttk.Label(control_frame, text="오른쪽 파일:").grid(row=2, column=0, sticky='w', padx=5, pady=5)
         self.file_right_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.file_right_var, width=50).grid(row=2, column=1, padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_file(self.file_right_var)).grid(row=2, column=2, padx=5, pady=5)
+        self.file_right_entry = ttk.Entry(control_frame, textvariable=self.file_right_var)
+        self.file_right_entry.grid(row=2, column=1, sticky='ew', padx=5, pady=5)
+        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_file(self.file_right_var, self.file_right_entry)).grid(row=2, column=2, padx=5, pady=5)
+
+        # Entry 위젯이 확장되도록 column 1에 weight 설정
+        control_frame.columnconfigure(1, weight=1)
 
         # 버튼 영역
         button_container = ttk.Frame(control_frame)
@@ -916,17 +926,23 @@ class CompareToolApp:
 
         return file_items
 
-    def browse_folder(self, var):
+    def browse_folder(self, var, entry_widget=None):
         """폴더 선택 대화상자"""
         folder = filedialog.askdirectory()
         if folder:
             var.set(folder)
+            # Entry의 끝으로 스크롤하여 폴더명이 보이도록 함
+            if entry_widget:
+                entry_widget.xview_moveto(1.0)
 
-    def browse_file(self, var):
+    def browse_file(self, var, entry_widget=None):
         """파일 선택 대화상자"""
         file = filedialog.askopenfilename()
         if file:
             var.set(file)
+            # Entry의 끝으로 스크롤하여 파일명이 보이도록 함
+            if entry_widget:
+                entry_widget.xview_moveto(1.0)
 
     def calculate_md5(self, filepath):
         """파일의 MD5 해시 계산"""
