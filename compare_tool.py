@@ -39,7 +39,9 @@ class DataManager:
             'text_history': [],
             'text_favorites': [],
             'file_history': [],
-            'file_favorites': []
+            'file_favorites': [],
+            'font_family': 'Consolas',  # 기본 폰트
+            'font_size': 10              # 기본 폰트 크기
         }
 
         self.load()
@@ -181,6 +183,19 @@ class DataManager:
     def get_file_favorites(self):
         return self.data['file_favorites']
 
+    def get_font_settings(self):
+        """폰트 설정 가져오기"""
+        return {
+            'family': self.data.get('font_family', 'Consolas'),
+            'size': self.data.get('font_size', 10)
+        }
+
+    def set_font_settings(self, family, size):
+        """폰트 설정 저장"""
+        self.data['font_family'] = family
+        self.data['font_size'] = size
+        self.save()
+
 
 class CompareToolApp:
     def __init__(self, root):
@@ -211,6 +226,11 @@ class CompareToolApp:
 
         # 데이터 매니저 초기화
         self.data_manager = DataManager()
+
+        # 폰트 설정 로드
+        font_settings = self.data_manager.get_font_settings()
+        self.font_family = font_settings['family']
+        self.font_size = font_settings['size']
 
         # 메뉴바 생성
         self.create_menubar()
@@ -252,6 +272,11 @@ class CompareToolApp:
         favorite_menu.add_command(label="폴더 비교 즐겨찾기", command=lambda: self.show_favorite_manager('folder'))
         favorite_menu.add_command(label="파일 비교 즐겨찾기", command=lambda: self.show_favorite_manager('file'))
         favorite_menu.add_command(label="텍스트 비교 즐겨찾기", command=lambda: self.show_favorite_manager('text'))
+
+        # 설정 메뉴
+        settings_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="설정", menu=settings_menu)
+        settings_menu.add_command(label="폰트 설정", command=self.show_font_settings)
 
     def setup_folder_compare_tab(self):
         """첫 번째 모드: 폴더 비교"""
@@ -369,21 +394,21 @@ class CompareToolApp:
 
         # 텍스트 위젯 Bootstrap 스타일
         self.folder_preview_left.config(bg='white', fg='#333',
-                                       font=('Consolas', 10), relief='solid', borderwidth=1,
+                                       font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
                                        highlightthickness=1, highlightbackground='#ccc',
                                        highlightcolor='#78C2AD')
         self.folder_preview_right.config(bg='white', fg='#333',
-                                        font=('Consolas', 10), relief='solid', borderwidth=1,
+                                        font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
                                         highlightthickness=1, highlightbackground='#ccc',
                                         highlightcolor='#78C2AD')
 
         # 차이점 표시 - Bootstrap Warning 스타일
         self.folder_preview_left.tag_config('diff', background='#fff9e6',
                                            foreground='#ff6b6b',
-                                           font=('Consolas', 10, 'bold'))
+                                           font=(self.font_family, self.font_size, 'bold'))
         self.folder_preview_right.tag_config('diff', background='#fff9e6',
                                             foreground='#ff6b6b',
-                                            font=('Consolas', 10, 'bold'))
+                                            font=(self.font_family, self.font_size, 'bold'))
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.folder_preview_left, self.folder_preview_right)
@@ -425,7 +450,7 @@ class CompareToolApp:
         left_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
         self.text_left = scrolledtext.ScrolledText(left_frame, wrap='word', width=40, height=30,
                                                    bg='white', fg='#333',
-                                                   font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                   font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
                                                    highlightthickness=1,
                                                    highlightbackground='#ccc',
                                                    highlightcolor='#78C2AD',
@@ -437,7 +462,7 @@ class CompareToolApp:
         right_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
         self.text_right = scrolledtext.ScrolledText(right_frame, wrap='word', width=40, height=30,
                                                     bg='white', fg='#333',
-                                                    font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                    font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
                                                     highlightthickness=1,
                                                     highlightbackground='#ccc',
                                                     highlightcolor='#78C2AD',
@@ -452,11 +477,11 @@ class CompareToolApp:
         self.text_left.tag_config('diff',
                                  background='#fff9e6',
                                  foreground='#ff6b6b',
-                                 font=('Consolas', 11, 'bold'))
+                                 font=(self.font_family, self.font_size, 'bold'))
         self.text_right.tag_config('diff',
                                   background='#fff9e6',
                                   foreground='#ff6b6b',
-                                  font=('Consolas', 11, 'bold'))
+                                  font=(self.font_family, self.font_size, 'bold'))
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.text_left, self.text_right)
@@ -509,7 +534,7 @@ class CompareToolApp:
         left_file_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
         self.file_text_left = scrolledtext.ScrolledText(left_file_frame, wrap='word', width=40, height=30,
                                                         bg='white', fg='#333',
-                                                        font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                        font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
                                                         highlightthickness=1,
                                                         highlightbackground='#ccc',
                                                         highlightcolor='#78C2AD',
@@ -521,7 +546,7 @@ class CompareToolApp:
         right_file_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
         self.file_text_right = scrolledtext.ScrolledText(right_file_frame, wrap='word', width=40, height=30,
                                                          bg='white', fg='#333',
-                                                         font=('Consolas', 11), relief='solid', borderwidth=1,
+                                                         font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
                                                          highlightthickness=1,
                                                          highlightbackground='#ccc',
                                                          highlightcolor='#78C2AD',
@@ -532,11 +557,11 @@ class CompareToolApp:
         self.file_text_left.tag_config('diff',
                                        background='#fff9e6',
                                        foreground='#ff6b6b',
-                                       font=('Consolas', 11, 'bold'))
+                                       font=(self.font_family, self.font_size, 'bold'))
         self.file_text_right.tag_config('diff',
                                         background='#fff9e6',
                                         foreground='#ff6b6b',
-                                        font=('Consolas', 11, 'bold'))
+                                        font=(self.font_family, self.font_size, 'bold'))
 
         # 복사/붙여넣기 기능 활성화
         self.enable_clipboard_operations(self.file_text_left)
@@ -1334,7 +1359,7 @@ class CompareToolApp:
         scrollbar.pack(side='right', fill='y')
 
         listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set,
-                            font=('Consolas', 11), height=15,
+                            font=(self.font_family, self.font_size), height=15,
                             selectmode='single', activestyle='dotbox')
         listbox.pack(fill='both', expand=True)
         scrollbar.config(command=listbox.yview)
@@ -1524,7 +1549,7 @@ class CompareToolApp:
         scrollbar.pack(side='right', fill='y')
 
         listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set,
-                            font=('Consolas', 11), height=20,
+                            font=(self.font_family, self.font_size), height=20,
                             selectmode='single', activestyle='dotbox')
         listbox.pack(fill='both', expand=True)
         scrollbar.config(command=listbox.yview)
@@ -1619,6 +1644,122 @@ class CompareToolApp:
         if data_type == 'favorite':
             ttk.Button(button_frame, text="이름 변경", command=rename_item).pack(side='left', padx=5)
         ttk.Button(button_frame, text="닫기", command=win.destroy).pack(side='left', padx=5)
+
+    def show_font_settings(self):
+        """폰트 설정 대화상자"""
+        win = tk.Toplevel(self.root)
+        win.title("폰트 설정")
+        win.geometry("400x250")
+        win.resizable(False, False)
+
+        # 중앙에 배치
+        win.transient(self.root)
+        win.grab_set()
+
+        # 메인 프레임
+        main_frame = ttk.Frame(win, padding=20)
+        main_frame.pack(fill='both', expand=True)
+
+        # 설명
+        ttk.Label(main_frame, text="폴더 목록 및 비교 창의 폰트를 설정합니다.",
+                 font=('', 10)).pack(pady=(0, 20))
+
+        # 폰트 패밀리 선택
+        font_family_frame = ttk.Frame(main_frame)
+        font_family_frame.pack(fill='x', pady=10)
+
+        ttk.Label(font_family_frame, text="폰트:", width=15).pack(side='left')
+        font_family_var = tk.StringVar(value=self.font_family)
+
+        # 일반적으로 사용 가능한 폰트 목록
+        common_fonts = [
+            'Consolas', 'Courier New', 'Monaco', 'Menlo',
+            'DejaVu Sans Mono', 'Liberation Mono', 'Source Code Pro',
+            'Arial', 'Helvetica', 'Verdana', 'Tahoma', 'Segoe UI',
+            'Malgun Gothic', 'Gulim', 'Dotum', 'Batang'
+        ]
+
+        font_combo = ttk.Combobox(font_family_frame, textvariable=font_family_var,
+                                 values=common_fonts, width=20, state='readonly')
+        font_combo.pack(side='left', padx=5)
+
+        # 폰트 크기 선택
+        font_size_frame = ttk.Frame(main_frame)
+        font_size_frame.pack(fill='x', pady=10)
+
+        ttk.Label(font_size_frame, text="크기:", width=15).pack(side='left')
+        font_size_var = tk.IntVar(value=self.font_size)
+
+        size_spinbox = ttk.Spinbox(font_size_frame, from_=8, to=20,
+                                   textvariable=font_size_var, width=20)
+        size_spinbox.pack(side='left', padx=5)
+
+        # 미리보기
+        preview_frame = ttk.LabelFrame(main_frame, text="미리보기", padding=10)
+        preview_frame.pack(fill='both', expand=True, pady=10)
+
+        preview_text = tk.Text(preview_frame, height=3, wrap='none')
+        preview_text.pack(fill='both', expand=True)
+        preview_text.insert('1.0', "The quick brown fox jumps over the lazy dog\n빠른 갈색 여우가 게으른 개를 뛰어넘습니다\n0123456789")
+
+        def update_preview(*args):
+            try:
+                preview_text.config(font=(font_family_var.get(), font_size_var.get()))
+            except:
+                pass
+
+        font_family_var.trace('w', update_preview)
+        font_size_var.trace('w', update_preview)
+        update_preview()
+
+        # 버튼
+        button_frame = ttk.Frame(main_frame)
+        button_frame.pack(fill='x', pady=(10, 0))
+
+        def apply_settings():
+            self.font_family = font_family_var.get()
+            self.font_size = font_size_var.get()
+            self.data_manager.set_font_settings(self.font_family, self.font_size)
+            self.apply_fonts()
+            messagebox.showinfo("완료", "폰트 설정이 적용되었습니다.")
+            win.destroy()
+
+        ttk.Button(button_frame, text="적용", command=apply_settings,
+                  bootstyle='success').pack(side='left', padx=5)
+        ttk.Button(button_frame, text="취소", command=win.destroy).pack(side='left', padx=5)
+
+    def apply_fonts(self):
+        """모든 위젯에 폰트 적용"""
+        # 폰트 튜플 생성
+        normal_font = (self.font_family, self.font_size)
+        bold_font = (self.font_family, self.font_size, 'bold')
+
+        # 폴더 비교 탭의 미리보기 텍스트 위젯
+        if hasattr(self, 'folder_preview_left'):
+            self.folder_preview_left.config(font=normal_font)
+            self.folder_preview_left.tag_config('diff', font=bold_font)
+
+        if hasattr(self, 'folder_preview_right'):
+            self.folder_preview_right.config(font=normal_font)
+            self.folder_preview_right.tag_config('diff', font=bold_font)
+
+        # 텍스트 비교 탭의 텍스트 위젯
+        if hasattr(self, 'text_left'):
+            self.text_left.config(font=normal_font)
+            self.text_left.tag_config('diff', font=bold_font)
+
+        if hasattr(self, 'text_right'):
+            self.text_right.config(font=normal_font)
+            self.text_right.tag_config('diff', font=bold_font)
+
+        # 파일 비교 탭의 텍스트 위젯
+        if hasattr(self, 'file_text_left'):
+            self.file_text_left.config(font=normal_font)
+            self.file_text_left.tag_config('diff', font=bold_font)
+
+        if hasattr(self, 'file_text_right'):
+            self.file_text_right.config(font=normal_font)
+            self.file_text_right.tag_config('diff', font=bold_font)
 
 
 def main():
