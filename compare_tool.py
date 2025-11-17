@@ -555,22 +555,33 @@ class CompareToolApp:
         ttk.Entry(control_frame, textvariable=self.file_right_var, width=50).grid(row=2, column=1, padx=5, pady=5)
         ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_file(self.file_right_var)).grid(row=2, column=2, padx=5, pady=5)
 
-        # 버튼
-        button_frame = ttk.Frame(control_frame)
-        button_frame.grid(row=3, column=0, columnspan=3, pady=10)
-        ttk.Button(button_frame, text="▶ 비교하기", command=self.compare_files, bootstyle='primary').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="◀ 왼쪽으로 복사", command=self.copy_diff_to_left, bootstyle='warning').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="오른쪽으로 복사 ▶", command=self.copy_diff_to_right, bootstyle='warning').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="💾 왼쪽 파일 저장", command=lambda: self.save_file('left'), bootstyle='success').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="💾 오른쪽 파일 저장", command=lambda: self.save_file('right'), bootstyle='success').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="🔄 초기화", command=self.clear_file_comparison).pack(side='left', padx=5)
+        # 버튼 영역
+        button_container = ttk.Frame(control_frame)
+        button_container.grid(row=3, column=0, columnspan=3, pady=10)
+
+        # 첫 번째 줄: 비교 및 부분 복사
+        button_frame1 = ttk.Frame(button_container)
+        button_frame1.pack(fill='x', pady=(0, 5))
+        ttk.Button(button_frame1, text="▶ 비교하기", command=self.compare_files, bootstyle='primary').pack(side='left', padx=5)
+        ttk.Button(button_frame1, text="🔄 재비교 (편집 후)", command=self.recompare_files, bootstyle='info').pack(side='left', padx=5)
+        ttk.Button(button_frame1, text="◀ 왼쪽으로 복사 (블록)", command=self.copy_diff_to_left, bootstyle='warning').pack(side='left', padx=5)
+        ttk.Button(button_frame1, text="오른쪽으로 복사 ▶ (블록)", command=self.copy_diff_to_right, bootstyle='warning').pack(side='left', padx=5)
+
+        # 두 번째 줄: 전체 덮어쓰기, 저장, 초기화
+        button_frame2 = ttk.Frame(button_container)
+        button_frame2.pack(fill='x')
+        ttk.Button(button_frame2, text="◀◀ 왼쪽으로 전체 덮어쓰기", command=self.copy_all_to_left, bootstyle='danger').pack(side='left', padx=5)
+        ttk.Button(button_frame2, text="오른쪽으로 전체 덮어쓰기 ▶▶", command=self.copy_all_to_right, bootstyle='danger').pack(side='left', padx=5)
+        ttk.Button(button_frame2, text="💾 왼쪽 파일 저장", command=lambda: self.save_file('left'), bootstyle='success').pack(side='left', padx=5)
+        ttk.Button(button_frame2, text="💾 오른쪽 파일 저장", command=lambda: self.save_file('right'), bootstyle='success').pack(side='left', padx=5)
+        ttk.Button(button_frame2, text="🔄 초기화", command=self.clear_file_comparison).pack(side='left', padx=5)
 
         # 파일 내용 표시 영역
         file_text_frame = ttk.Frame(frame)
         file_text_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
-        # 왼쪽 파일 내용 - Bootstrap Card Style
-        left_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 왼쪽 파일 내용 ", padding=10)
+        # 왼쪽 파일 내용 - Bootstrap Card Style (편집 가능)
+        left_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 왼쪽 파일 내용 (편집 가능) ", padding=10)
         left_file_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
         self.file_text_left = scrolledtext.ScrolledText(left_file_frame, wrap='word', width=40, height=30,
                                                         bg='white', fg='#333',
@@ -578,11 +589,12 @@ class CompareToolApp:
                                                         highlightthickness=1,
                                                         highlightbackground='#ccc',
                                                         highlightcolor='#78C2AD',
-                                                        insertbackground='#78C2AD')
+                                                        insertbackground='#78C2AD',
+                                                        state='normal')  # 편집 가능 상태
         self.file_text_left.pack(fill='both', expand=True)
 
-        # 오른쪽 파일 내용 - Bootstrap Card Style
-        right_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 오른쪽 파일 내용 ", padding=10)
+        # 오른쪽 파일 내용 - Bootstrap Card Style (편집 가능)
+        right_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 오른쪽 파일 내용 (편집 가능) ", padding=10)
         right_file_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
         self.file_text_right = scrolledtext.ScrolledText(right_file_frame, wrap='word', width=40, height=30,
                                                          bg='white', fg='#333',
@@ -590,7 +602,8 @@ class CompareToolApp:
                                                          highlightthickness=1,
                                                          highlightbackground='#ccc',
                                                          highlightcolor='#78C2AD',
-                                                         insertbackground='#78C2AD')
+                                                         insertbackground='#78C2AD',
+                                                         state='normal')  # 편집 가능 상태
         self.file_text_right.pack(fill='both', expand=True)
 
         # 차이점 표시 - Bootstrap Warning Alert 스타일
@@ -1650,6 +1663,48 @@ class CompareToolApp:
 
         self.compare_text_detailed(self.file_text_left, self.file_text_right, left_lines, right_lines,
                                   store_blocks=True, blocks_list=self.file_diff_blocks)
+
+    def copy_all_to_right(self):
+        """왼쪽 파일 전체 내용으로 오른쪽 파일 덮어쓰기"""
+        # 확인 메시지
+        result = messagebox.askyesno("확인",
+                                     "오른쪽 파일 내용을 왼쪽 파일 내용으로 완전히 덮어쓰시겠습니까?\n"
+                                     "이 작업은 저장 전까지 취소할 수 있습니다.")
+        if not result:
+            return
+
+        # 왼쪽 전체 내용 가져오기
+        left_content = self.file_text_left.get('1.0', 'end-1c')
+
+        # 오른쪽 내용 덮어쓰기
+        self.file_text_right.delete('1.0', 'end')
+        self.file_text_right.insert('1.0', left_content)
+
+        # 비교 재실행 (하이라이트 업데이트)
+        self.recompare_files()
+
+        messagebox.showinfo("완료", "왼쪽 파일 내용으로 오른쪽 파일을 덮어썼습니다.")
+
+    def copy_all_to_left(self):
+        """오른쪽 파일 전체 내용으로 왼쪽 파일 덮어쓰기"""
+        # 확인 메시지
+        result = messagebox.askyesno("확인",
+                                     "왼쪽 파일 내용을 오른쪽 파일 내용으로 완전히 덮어쓰시겠습니까?\n"
+                                     "이 작업은 저장 전까지 취소할 수 있습니다.")
+        if not result:
+            return
+
+        # 오른쪽 전체 내용 가져오기
+        right_content = self.file_text_right.get('1.0', 'end-1c')
+
+        # 왼쪽 내용 덮어쓰기
+        self.file_text_left.delete('1.0', 'end')
+        self.file_text_left.insert('1.0', right_content)
+
+        # 비교 재실행 (하이라이트 업데이트)
+        self.recompare_files()
+
+        messagebox.showinfo("완료", "오른쪽 파일 내용으로 왼쪽 파일을 덮어썼습니다.")
 
     # 히스토리 및 즐겨찾기 관련 메서드
     def load_from_history(self, category):
