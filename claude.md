@@ -1073,6 +1073,935 @@ history_menu.add_command(label="My Mode 히스토리",
 
 ---
 
-**문서 버전**: 1.0
+## Deep Code Analysis (심층 코드 분석)
+
+> 이 섹션은 소스코드의 내부 로직, 알고리즘, 에지 케이스 처리, 성능 최적화 등을 상세히 분석합니다.
+
+### 1. difflib.SequenceMatcher 활용 분석
+
+#### 핵심 알고리즘: compare_text_detailed() (라인 1377-1446)
+
+**동작 원리**:
+```python
+matcher = difflib.SequenceMatcher(None, left_lines, right_lines)
+for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+    # tag: 'equal', 'delete', 'insert', 'replace'
+    # i1:i2 - 왼쪽 텍스트의 라인 범위
+    # j1:j2 - 오른쪽 텍스트의 라인 범위
+```
+
+**SequenceMatcher의 opcode 종류**:
+1. **'equal'**: 양쪽이 완전히 동일 (스킵)
+2. **'delete'**: 왼쪽에만 존재하는 라인
+3. **'insert'**: 오른쪽에만 존재하는 라인
+4. **'replace'**: 양쪽 모두 있지만 내용이 다름
+
+**문자 단위 비교 최적화** (라인 1426-1440):
+```python
+if len(left_block) == 1 and len(right_block) == 1:
+    # 단일 라인 변경: 문자 단위 비교
+    char_matcher = difflib.SequenceMatcher(None, left_line, right_line)
+    for char_tag, c_i1, c_i2, c_j1, c_j2 in char_matcher.get_opcodes():
+        if char_tag != 'equal':
+            # 정확히 어느 문자가 다른지 하이라이트
+```
+
+**장점**:
+- 단일 라인 변경 시 정확한 문자 위치 표시
+- 사용자가 어느 부분이 수정되었는지 즉시 파악 가능
+
+**제한사항**:
+- 다중 라인 변경 시 라인 단위로 하이라이트 (라인 1442-1446)
+- 성능상의 이유로 문자 단위 비교를 단일 라인에만 적용
+
+#### Diff 블록 저장 메커니즘 (라인 1388-1410)
+
+**목적**: 파일 비교 모드에서 커서 위치 기반으로 diff 블록 복사 지원
+
+**데이터 구조**:
+```python
+block_info = {
+    'tag': tag,              # 'delete', 'insert', 'replace'
+    'left_start': i1 + 1,    # 1-based 라인 번호
+    'left_end': i2,          # exclusive (끝 라인 제외)
+    'right_start': j1 + 1,
+    'right_end': j2,
+    'left_lines': left_lines[i1:i2],   # 실제 텍스트
+    'right_lines': right_lines[j1:j2]
+}
+```
+
+**활용 시나리오**:
+1. 사용자가 파일 비교 후 특정 차이점 부분에 커서 위치
+2. `find_diff_block_at_cursor()` 호출 (라인 1576-1602)
+3. 현재 라인 번호로 해당 블록 검색
+4. `copy_diff_to_left/right()` 실행 (라인 1604-1664)
+5. 블록 단위로 정확하게 복사
+
+**에지 케이스 처리**:
+- 커서가 diff 블록 밖에 있을 때: "커서가 차이점 블록 위에 있지 않습니다" 경고 (라인 1609, 1640)
+- 블록 타입별 다른 처리:
+  - `delete`: 오른쪽에 삽입 (라인 1616-1619)
+  - `insert`: 오른쪽에서 삭제 (라인 1620-1624)
+  - `replace`: 오른쪽 내용 교체 (라인 1625-1630)
+
+---
+
+### 2. 텍스트 위젯 태그 시스템 심층 분석
+
+#### tkinter Text 위젯의 태그 메커니즘
+
+**태그 구조**:
+```python
+# 태그 설정 (라인 449-454, 520-527, 620-627)
+widget.tag_config('diff',
+    background='#fff9e6',    # 연한 노란색
+    foreground='#ff6b6b',    # 빨간색
+    font=(family, size, 'bold')
+)
+```
+
+**위치 지정 시스템**:
+```python
+# "라인번호.컬럼번호" 형식
+start_pos = f"{line_num}.{start_col}"  # 예: "5.10" = 5번 라인 10번째 문자
+end_pos = f"{line_num}.{end_col}"
+widget.tag_add('diff', start_pos, end_pos)
+```
+
+**태그 제거**:
+```python
+# 재비교 전 기존 하이라이트 제거
+widget.tag_remove('diff', '1.0', 'end')
+```
+
+**중요한 특징**:
+1. **여러 태그 중첩 가능**: 같은 텍스트에 여러 태그 적용 가능
+2. **태그 우선순위**: 나중에 추가된 태그가 우선 (현재는 diff 태그만 사용)
+3. **동적 스타일 변경**: `tag_config()` 호출로 실시간 스타일 변경 가능
+
+#### 폰트 적용 메커니즘 (라인 2148-2179)
+
+**모든 텍스트 위젯에 폰트 일괄 적용**:
+```python
+def apply_fonts(self):
+    normal_font = (self.font_family, self.font_size)
+    bold_font = (self.font_family, self.font_size, 'bold')
+
+    # 위젯 자체 폰트
+    widget.config(font=normal_font)
+
+    # diff 태그 폰트 (굵게)
+    widget.tag_config('diff', font=bold_font)
+```
+
+**hasattr 체크 이유** (라인 2155-2179):
+- 폰트 설정 시점에 모든 위젯이 생성되지 않았을 수 있음
+- 탭이 아직 초기화되지 않은 경우 방어적 프로그래밍
+
+---
+
+### 3. 스크롤 동기화 메커니즘 상세 분석
+
+#### setup_scroll_sync() 구현 (라인 851-895)
+
+**세 가지 동기화 방법**:
+
+**1. 마우스 휠 이벤트** (라인 858-868):
+```python
+def on_mousewheel(event, widget_source):
+    delta = -1 if event.delta > 0 else 1
+    widget1.yview_scroll(delta, "units")
+    widget2.yview_scroll(delta, "units")
+    return "break"  # 이벤트 전파 방지 (중요!)
+```
+
+**"break" 반환의 중요성**:
+- tkinter 이벤트 전파 체인을 중단
+- 없으면 스크롤이 이중으로 발생하여 위치 불일치 발생
+
+**2. Linux/Unix 마우스 휠** (Button-4/5) (라인 871-884):
+```python
+# Button-4: 위로 스크롤
+# Button-5: 아래로 스크롤
+widget.bind("<Button-4>", scroll_up)
+widget.bind("<Button-5>", scroll_down)
+```
+
+**플랫폼 차이**:
+- **Windows/macOS**: `<MouseWheel>` 이벤트 사용
+- **Linux/X11**: `<Button-4>`, `<Button-5>` 이벤트 사용
+- 두 방식 모두 바인딩하여 크로스 플랫폼 지원
+
+**3. 스크롤바 드래그 동기화** (라인 886-895):
+```python
+def on_scrollbar(*args):
+    widget1.yview(*args)
+    widget2.yview(*args)
+
+# ScrolledText의 내부 스크롤바 command 재설정
+widget1.vbar.config(command=on_scrollbar)
+widget2.vbar.config(command=on_scrollbar)
+```
+
+**ScrolledText 내부 구조**:
+- `widget.vbar`: 수직 스크롤바 객체
+- `vbar.config(command=...)`: 스크롤바 드래그 시 호출할 함수 지정
+- `yview(*args)`: 스크롤 위치 설정 (args는 비율 정보)
+
+**동기화 정확성**:
+- 두 위젯이 완전히 같은 비율로 스크롤
+- `yview_scroll(delta, "units")`: 상대적 스크롤
+- `yview(*args)`: 절대적 위치 설정
+
+---
+
+### 4. 폴더 비교 알고리즘 최적화 기법
+
+#### compare_folders() 성능 최적화 (라인 1011-1164)
+
+**1. 파일 수집 전략** (라인 1036-1063):
+```python
+# os.walk() 사용 - 재귀적 디렉토리 순회
+for root, dirs, files in os.walk(left_folder):
+    for file in files:
+        full_path = os.path.join(root, file)
+        rel_path = os.path.relpath(full_path, left_folder)
+
+        # 제외 패턴 조기 체크
+        if self.should_exclude(rel_path, exclude_patterns):
+            excluded_files.add(rel_path)
+            continue  # MD5 계산 전에 제외
+
+        left_files[rel_path] = full_path
+```
+
+**최적화 포인트**:
+- **조기 필터링**: MD5 계산 전에 제외 패턴 체크
+- **딕셔너리 사용**: O(1) 시간 복잡도로 파일 조회
+- **상대 경로 키**: 양쪽 폴더를 동일 구조로 비교 가능
+
+**2. MD5 계산 최적화** (라인 947-956):
+```python
+def calculate_md5(self, filepath):
+    hash_md5 = hashlib.md5()
+    with open(filepath, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+```
+
+**청크 기반 읽기의 이점**:
+- **메모리 효율**: 4KB씩 읽어 대용량 파일도 처리 가능
+- **일관된 성능**: 파일 크기와 무관하게 일정한 메모리 사용
+- **4096 바이트 선택 이유**: 대부분 파일 시스템의 블록 크기
+
+**대안 비교**:
+```python
+# ❌ 나쁜 방법: 전체 파일을 메모리에 로드
+with open(filepath, "rb") as f:
+    content = f.read()  # 10GB 파일이면 10GB 메모리 사용
+    return hashlib.md5(content).hexdigest()
+
+# ✅ 좋은 방법: 청크 기반
+for chunk in iter(lambda: f.read(4096), b""):  # 항상 4KB만 사용
+```
+
+**3. 트리 구조 생성 알고리즘** (라인 1128-1158):
+```python
+# 폴더 노드 캐싱
+folder_nodes = {}  # 경로 -> 트리 아이템 ID
+
+for rel_path in sorted(all_paths):
+    path_parts = rel_path.split(os.sep)
+
+    if len(path_parts) > 1:
+        cumulative_path = ''
+        parent_id = ''
+
+        # 경로의 각 폴더 노드 생성 (없으면)
+        for part in path_parts[:-1]:
+            cumulative_path = os.path.join(cumulative_path, part) if cumulative_path else part
+
+            # 폴더 노드가 없으면 생성
+            if cumulative_path not in folder_nodes:
+                folder_nodes[cumulative_path] = self.folder_tree.insert(
+                    parent_id, 'end', text=f"📁 {part}",
+                    values=('', '', '', '', ''), open=True
+                )
+            parent_id = folder_nodes[cumulative_path]
+```
+
+**캐싱 전략**:
+- **문제**: 같은 폴더를 여러 번 생성하면 중복 노드 발생
+- **해결**: `folder_nodes` 딕셔너리로 이미 생성한 폴더 추적
+- **시간 복잡도**: O(1)로 폴더 노드 조회
+
+**예시 시나리오**:
+```
+파일 목록:
+- src/utils/file.py
+- src/utils/string.py
+- src/core/main.py
+
+트리 생성 과정:
+1. "src/utils/file.py" 처리:
+   - "src" 폴더 생성 → folder_nodes['src'] = item_id_1
+   - "src/utils" 폴더 생성 → folder_nodes['src/utils'] = item_id_2
+   - "file.py" 파일 추가
+
+2. "src/utils/string.py" 처리:
+   - "src" 폴더: folder_nodes에 있음 → 스킵
+   - "src/utils" 폴더: folder_nodes에 있음 → 스킵
+   - "string.py" 파일 추가
+
+3. "src/core/main.py" 처리:
+   - "src" 폴더: folder_nodes에 있음 → 스킵
+   - "src/core" 폴더 생성 → folder_nodes['src/core'] = item_id_3
+   - "main.py" 파일 추가
+```
+
+---
+
+### 5. 제외 패턴 매칭 로직 상세 분석
+
+#### should_exclude() 알고리즘 (라인 970-1009)
+
+**경로 정규화** (라인 975-980):
+```python
+# Windows 역슬래시를 슬래시로 통일
+normalized_path = rel_path.replace(os.sep, '/')  # "src\\utils\\file.py" → "src/utils/file.py"
+normalized_pattern = pattern.replace(os.sep, '/')
+```
+
+**크로스 플랫폼 호환성**:
+- **Windows**: `os.sep == '\\'`
+- **Unix/Mac**: `os.sep == '/'`
+- 모든 경로를 `/`로 통일하여 패턴 매칭 일관성 확보
+
+**폴더 패턴 매칭** (라인 982-993):
+```python
+if normalized_pattern.endswith('/'):
+    folder_pattern = normalized_pattern.rstrip('/')  # "node_modules/" → "node_modules"
+    path_parts = normalized_path.split('/')
+
+    # 경로의 모든 폴더 부분 검사
+    for part in path_parts[:-1]:  # 마지막(파일명) 제외
+        if fnmatch.fnmatch(part, folder_pattern):
+            return True
+
+    # 경로가 폴더 패턴으로 시작하는지
+    if normalized_path.startswith(folder_pattern + '/'):
+        return True
+```
+
+**폴더 매칭 예시**:
+```python
+# 패턴: "node_modules/"
+# 매칭되는 경로:
+"node_modules/package.json"        ✓ (경로가 node_modules/로 시작)
+"src/node_modules/lib/index.js"    ✓ (경로 중 node_modules 폴더 포함)
+"other/modules/file.js"             ✗ (node_modules 없음)
+```
+
+**파일 패턴 매칭** (라인 994-1007):
+```python
+else:
+    # 전체 경로 매칭
+    if fnmatch.fnmatch(normalized_path, normalized_pattern):
+        return True
+
+    # 파일 이름만 매칭
+    filename = os.path.basename(normalized_path)
+    if fnmatch.fnmatch(filename, normalized_pattern):
+        return True
+
+    # 경로의 모든 부분 매칭
+    path_parts = normalized_path.split('/')
+    for part in path_parts:
+        if fnmatch.fnmatch(part, normalized_pattern):
+            return True
+```
+
+**파일 매칭 예시**:
+```python
+# 패턴: "*.pyc"
+# 매칭되는 경로:
+"module.pyc"                    ✓ (파일명 매칭)
+"src/utils/helper.pyc"          ✓ (파일명 매칭)
+"test.py"                       ✗ (확장자 다름)
+
+# 패턴: "test_*"
+# 매칭되는 경로:
+"test_utils.py"                 ✓ (파일명 매칭)
+"src/test_helpers/file.py"      ✓ (경로 부분 매칭)
+"main.py"                       ✗ (패턴 불일치)
+```
+
+**fnmatch 모듈**:
+- Unix 쉘 스타일 패턴 매칭
+- `*`: 임의 문자열
+- `?`: 단일 문자
+- `[abc]`: 문자 집합
+- `[!abc]`: 문자 집합 제외
+
+---
+
+### 6. 클립보드 작업의 플랫폼별 처리
+
+#### macOS Command 키 감지 (라인 695-727)
+
+**문제점**:
+- tkinter의 `<Command-c>` 바인딩이 macOS에서 작동하지 않음
+- macOS는 Command 키를 특별하게 처리
+
+**해결 방법** (라인 699-713):
+```python
+def on_macos_key(event):
+    """macOS Command 키 조합 감지"""
+    is_command = bool(event.state & 0x0008)  # 비트 마스킹
+
+    if is_command and event.char:
+        key_char = event.char.lower()
+        if key_char == 'c':
+            return do_copy(event)
+        elif key_char == 'x':
+            return do_cut(event)
+        elif key_char == 'v':
+            return do_paste(event)
+        elif key_char == 'a':
+            return do_select_all(event)
+    return None
+
+widget.bind('<KeyPress>', on_macos_key, add='+')
+```
+
+**event.state 비트 필드**:
+```
+0x0001  Shift
+0x0002  Caps Lock
+0x0004  Control
+0x0008  Command (macOS)
+0x0010  Numlock
+0x0020  ...
+```
+
+**비트 마스킹**:
+```python
+event.state & 0x0008  # 0x0008 비트만 추출
+# 예시:
+# event.state = 0b00001010 (Shift + Command)
+# 0x0008      = 0b00001000
+# AND 결과    = 0b00001000 (True - Command 눌림)
+```
+
+**Windows/Linux 처리** (라인 717-727):
+```python
+# 표준 Control 키 바인딩
+widget.bind('<Control-c>', do_copy, add='+')
+widget.bind('<Control-x>', do_cut, add='+')
+widget.bind('<Control-v>', do_paste, add='+')
+widget.bind('<Control-a>', do_select_all, add='+')
+
+# Windows 추가 단축키
+widget.bind('<Control-Insert>', do_copy, add='+')
+widget.bind('<Shift-Delete>', do_cut, add='+')
+widget.bind('<Shift-Insert>', do_paste, add='+')
+```
+
+**add='+' 파라미터**:
+- 기존 바인딩을 유지하면서 새 바인딩 추가
+- 없으면 기존 바인딩이 덮어씌워짐
+
+#### 가상 이벤트 활용 (라인 641-686)
+
+**가상 이벤트 우선 사용**:
+```python
+def do_copy(event=None):
+    try:
+        widget.event_generate("<<Copy>>")  # 가상 이벤트 발생
+    except:
+        # 실패 시 대체 구현
+        if widget.tag_ranges('sel'):
+            text = widget.get('sel.first', 'sel.last')
+            widget.clipboard_clear()
+            widget.clipboard_append(text)
+    return "break"
+```
+
+**가상 이벤트의 장점**:
+1. **플랫폼 독립적**: OS별 클립보드 처리 자동화
+2. **Undo/Redo 연동**: 텍스트 위젯의 undo 스택과 통합
+3. **일관된 동작**: tkinter 표준 동작 보장
+
+**대체 구현이 필요한 이유**:
+- 일부 OS/환경에서 가상 이벤트가 실패할 수 있음
+- 방어적 프로그래밍으로 100% 작동 보장
+
+#### 우클릭 컨텍스트 메뉴 (라인 729-757)
+
+**플랫폼별 우클릭 이벤트**:
+```python
+# 모든 플랫폼
+widget.bind('<Button-3>', show_context_menu, add='+')
+
+if self.is_macos:
+    # macOS 추가 지원
+    widget.bind('<Button-2>', show_context_menu, add='+')          # 중간 클릭
+    widget.bind('<Control-Button-1>', show_context_menu, add='+')  # Ctrl+클릭
+```
+
+**macOS 우클릭 이벤트**:
+- `<Button-2>`: 마우스 중간 버튼 (트랙패드 두 손가락 클릭)
+- `<Control-Button-1>`: Ctrl + 왼쪽 클릭
+- `<Button-3>`: 일부 마우스의 우클릭
+
+**메뉴 표시 및 해제** (라인 747-750):
+```python
+try:
+    context_menu.tk_popup(event.x_root, event.y_root, 0)
+finally:
+    context_menu.grab_release()  # 필수!
+```
+
+**grab_release() 필요성**:
+- `tk_popup()`은 메뉴에 grab(포커스 독점) 설정
+- 해제하지 않으면 메뉴 닫은 후에도 다른 위젯 클릭 불가
+- `finally` 블록으로 예외 시에도 반드시 해제
+
+---
+
+### 7. 파일 복사/삭제 작업의 에러 처리
+
+#### copy_file() 에러 처리 전략 (라인 1166-1234)
+
+**다중 파일 복사 시 부분 실패 처리**:
+```python
+copied_count = 0
+error_count = 0
+error_messages = []
+
+for item in all_file_items:
+    try:
+        if direction == 'left_to_right':
+            os.makedirs(os.path.dirname(right_path), exist_ok=True)
+            shutil.copy2(left_path, right_path)
+            copied_count += 1
+    except Exception as e:
+        error_count += 1
+        error_messages.append(f"{rel_path}: {str(e)}")
+```
+
+**부분 성공 처리**:
+- **모두 성공**: 성공 메시지 + 비교 재실행
+- **일부 성공**: 성공/실패 개수 표시 + 최대 5개 실패 파일 나열
+- **모두 실패**: 에러 메시지만 표시
+
+**사용자 경험 개선**:
+```python
+if len(error_messages) <= 5:
+    result_msg += "\n\n실패한 파일:\n" + "\n".join(error_messages)
+else:
+    result_msg += "\n\n실패한 파일:\n" + "\n".join(error_messages[:5]) + \
+                  f"\n... 외 {len(error_messages)-5}개"
+```
+
+**shutil.copy2 vs shutil.copy**:
+- `copy2`: 메타데이터(수정 시간, 권한) 보존
+- `copy`: 내용만 복사
+- 선택 이유: 파일 비교 도구이므로 메타데이터 보존 중요
+
+**디렉토리 자동 생성** (라인 1208, 1213):
+```python
+os.makedirs(os.path.dirname(right_path), exist_ok=True)
+```
+
+**exist_ok=True**:
+- 디렉토리가 이미 존재해도 에러 발생 안 함
+- 없으면 `FileExistsError` 예외 처리 필요
+
+#### delete_selected() 안전 장치 (라인 1236-1284)
+
+**삭제 전 확인**:
+```python
+if not messagebox.askyesno("확인", f"{file_count}개 파일을 삭제하시겠습니까?"):
+    return
+```
+
+**폴더 노드 보호** (라인 1263-1266):
+```python
+item_values = self.folder_tree.item(item, 'values')
+if not item_values or not item_values[0]:  # 상태가 없으면 폴더
+    continue  # 폴더는 삭제 안 함
+```
+
+**양쪽 파일 삭제** (라인 1272-1280):
+```python
+try:
+    if os.path.exists(left_path):
+        os.remove(left_path)
+        deleted_count += 1
+    if os.path.exists(right_path):
+        os.remove(right_path)
+        deleted_count += 1
+except Exception as e:
+    messagebox.showerror("오류", f"파일 삭제 실패: {rel_path}\n{str(e)}")
+```
+
+**에러 처리 차이**:
+- **복사**: 일괄 처리 후 한 번에 결과 표시
+- **삭제**: 실패 시 즉시 에러 다이얼로그 표시 (더 중요한 작업)
+
+---
+
+### 8. 히스토리/즐겨찾기 UI 패턴
+
+#### 리스트박스 구분선 처리 (라인 1812-1841)
+
+**구분선 삽입**:
+```python
+for idx, item in enumerate(current_items):
+    display = f"⭐ {item['name']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
+    listbox.insert('end', display)
+
+    # 구분선 추가 (마지막 항목 제외)
+    if idx < len(current_items) - 1:
+        listbox.insert('end', '─' * 80)
+```
+
+**구분선 선택 방지** (라인 1837-1841):
+```python
+index = selection[0]
+if index % 2 == 1:  # 홀수 인덱스는 구분선
+    messagebox.showwarning("경고", "항목을 선택해주세요. (구분선이 아닌 항목을 선택하세요)")
+    return
+
+actual_index = index // 2  # 실제 데이터 인덱스
+```
+
+**인덱스 계산**:
+```
+리스트박스 인덱스    실제 데이터 인덱스
+0 (항목 0)         → 0 // 2 = 0
+1 (구분선)         → 홀수 (스킵)
+2 (항목 1)         → 2 // 2 = 1
+3 (구분선)         → 홀수 (스킵)
+4 (항목 2)         → 4 // 2 = 2
+```
+
+#### refresh_list() 패턴 (라인 1784-1825)
+
+**동적 리스트 업데이트**:
+```python
+def refresh_list():
+    listbox.delete(0, 'end')  # 기존 항목 모두 삭제
+
+    # 최신 데이터 가져오기
+    current_items = self.data_manager.get_*_history/favorites()
+
+    # 항목 다시 추가
+    for idx, item in enumerate(current_items):
+        # ...
+
+    # 정보 레이블 업데이트
+    # ...
+
+    return current_items
+```
+
+**nonlocal 변수 사용** (라인 1883-1884):
+```python
+nonlocal current_items
+current_items = refresh_list()
+```
+
+**이유**:
+- `delete_selected()` 내부에서 `current_items` 재할당
+- `nonlocal` 없으면 로컬 변수로 처리되어 외부 변수 변경 안 됨
+
+---
+
+### 9. 모달 다이얼로그 관리
+
+#### transient와 grab_set (라인 2073-2074, 2258-2259)
+
+**모달 다이얼로그 설정**:
+```python
+win.transient(self.root)  # 부모 윈도우 설정
+win.grab_set()             # 포커스 독점
+```
+
+**transient 효과**:
+1. 다이얼로그가 부모 윈도우 위에 항상 표시
+2. 부모 윈도우 최소화 시 함께 최소화
+3. Alt+Tab에서 별도 항목으로 표시 안 됨
+
+**grab_set 효과**:
+1. 다이얼로그 외부 클릭 불가
+2. 다이얼로그를 닫기 전까지 부모 윈도우 조작 불가
+3. 모달 동작 구현
+
+**모달 vs 비모달**:
+- **모달**: 폰트 설정, 제외 패턴 편집 (설정 완료 필요)
+- **비모달**: 히스토리 관리, 즐겨찾기 관리 (grab_set 없음)
+
+---
+
+### 10. 성능 고려사항 및 최적화 팁
+
+#### 대용량 파일 처리
+
+**현재 제한사항**:
+1. **전체 파일 메모리 로드** (라인 1528-1532, 1343-1356):
+   ```python
+   with open(file, 'r', encoding='utf-8') as f:
+       content = f.read()  # 전체 파일을 메모리에
+   ```
+
+2. **텍스트 위젯 메모리 제한**:
+   - tkinter Text 위젯은 수백만 라인 처리 시 느려짐
+   - 권장 최대: ~10MB 텍스트 파일
+
+**최적화 방안**:
+```python
+# 파일 크기 체크
+file_size = os.path.getsize(file_path)
+if file_size > 10 * 1024 * 1024:  # 10MB 초과
+    if not messagebox.askyesno("경고", "파일 크기가 큽니다. 계속하시겠습니까?"):
+        return
+```
+
+#### 폴더 비교 최적화
+
+**현재 병목**:
+- MD5 계산이 CPU 집약적
+- 파일 개수가 많으면 UI가 멈춤
+
+**개선 방안**:
+```python
+# 진행 상황 표시
+import threading
+
+def compare_in_thread():
+    # 백그라운드 스레드에서 비교
+    # 완료 시 UI 업데이트 (root.after 사용)
+    pass
+```
+
+#### 메모리 사용 최적화
+
+**현재 메모리 사용**:
+- 히스토리: 텍스트 비교는 전체 내용 저장 (라인 100-113)
+- diff 블록: 모든 차이점 라인 저장 (라인 1407-1408)
+
+**최적화 가능**:
+```python
+# 텍스트 히스토리 - 이미 미리보기만 저장 (라인 107-108)
+'left_preview': left_text[:200] + ('...' if len(left_text) > 200 else ''),
+
+# 하지만 전체 텍스트도 저장 (라인 101-102)
+'left_text': left_text,  # 큰 텍스트면 메모리 낭비
+```
+
+---
+
+## 추가 심층 분석
+
+### 11. 위젯 상태 관리 패턴
+
+#### read-only vs editable 상태 전환 (라인 1330-1369, 1496-1501)
+
+**폴더 미리보기 - read-only**:
+```python
+# 쓰기 가능 상태로 전환
+self.folder_preview_left.config(state='normal')
+
+# 내용 수정
+self.folder_preview_left.delete('1.0', 'end')
+self.folder_preview_left.insert('1.0', content)
+
+# 다시 read-only로
+self.folder_preview_left.config(state='disabled')
+```
+
+**목적**:
+- 사용자가 미리보기 내용을 실수로 수정하는 것 방지
+- 읽기 전용 상태에서도 텍스트 선택/복사 가능
+
+**파일 비교 - editable** (라인 603, 616):
+```python
+state='normal'  # 편집 가능 상태로 생성
+```
+
+**이유**:
+- 파일 내용을 수정한 후 저장하는 기능 제공
+- 블록 단위 복사 기능 사용
+
+---
+
+### 12. Entry 위젯 UX 개선 (라인 934-936, 943-945)
+
+#### 긴 경로 표시 최적화
+
+**문제점**:
+- 폴더/파일 경로가 길면 Entry 위젯에서 시작 부분만 보임
+- 사용자는 어떤 폴더/파일을 선택했는지 파악 어려움
+
+**해결책**:
+```python
+def browse_folder(self, var, entry_widget=None):
+    folder = filedialog.askdirectory()
+    if folder:
+        var.set(folder)
+        if entry_widget:
+            entry_widget.xview_moveto(1.0)  # 끝으로 스크롤
+```
+
+**xview_moveto(1.0)**:
+- 0.0: 맨 앞으로 스크롤
+- 1.0: 맨 끝으로 스크롤
+- 0.5: 중간으로 스크롤
+
+**효과**:
+```
+# 긴 경로 예시:
+/home/username/very/long/path/to/project/src/components/
+
+# xview_moveto(0.0) - 기본값:
+[/home/username/very/long/...        ]
+       ↑ 폴더명 안 보임
+
+# xview_moveto(1.0) - 적용 후:
+[...long/path/to/project/src/components/]
+                                 ↑ 폴더명 보임
+```
+
+---
+
+### 13. 이벤트 전파 제어
+
+#### "break" 반환의 중요성
+
+**이벤트 전파 체인**:
+```
+사용자 입력
+  ↓
+위젯별 바인딩 (add='+')
+  ↓
+클래스 바인딩
+  ↓
+Tk 레벨 바인딩
+  ↓
+OS 기본 동작
+```
+
+**"break" 반환 시**:
+- 현재 바인딩에서 체인 중단
+- 하위 바인딩 실행 안 됨
+
+**예시** (라인 653, 669, 686, 693):
+```python
+def do_copy(event=None):
+    # 복사 작업 수행
+    return "break"  # 이벤트 전파 중단
+```
+
+**없으면 발생하는 문제**:
+```python
+# "break" 없이 Cmd+C 처리:
+1. do_copy() 실행 - 클립보드에 복사
+2. 기본 OS 복사도 실행 - 클립보드에 다시 복사 (중복)
+3. 일부 환경에서 오동작 발생
+```
+
+---
+
+### 14. 데이터 일관성 보장
+
+#### 중복 제거 전략 (라인 78-83, 93-97)
+
+**폴더 히스토리 중복 제거**:
+```python
+# 같은 경로 조합이 이미 있으면 제거
+self.data['folder_history'] = [
+    h for h in self.data['folder_history']
+    if not (h['left'] == left and h['right'] == right)
+]
+# 새 항목을 맨 앞에 추가
+self.data['folder_history'].insert(0, item)
+```
+
+**효과**:
+- 같은 폴더 쌍을 다시 비교하면 타임스탬프만 갱신
+- 히스토리가 중복 없이 최신 순으로 정렬
+
+**최대 개수 제한** (라인 83, 97):
+```python
+self.data['folder_history'] = self.data['folder_history'][:self.max_history]
+```
+
+**제한 이유**:
+- 무한정 히스토리 누적 방지
+- config.json 파일 크기 제한
+- UI 리스트 표시 성능 유지
+
+---
+
+## 코딩 패턴 및 베스트 프랙티스
+
+### 1. 방어적 프로그래밍
+
+**hasattr 체크** (라인 2155-2179):
+```python
+if hasattr(self, 'folder_preview_left'):
+    self.folder_preview_left.config(font=normal_font)
+```
+
+**try-except 블록**:
+```python
+try:
+    widget.event_generate("<<Copy>>")
+except:
+    # 대체 구현
+```
+
+### 2. 사용자 피드백
+
+**작업 완료 메시지**:
+- 모든 주요 작업 후 messagebox로 결과 알림
+- 에러 발생 시 구체적인 에러 메시지
+
+**확인 다이얼로그**:
+- 파괴적 작업 전 확인 (삭제, 덮어쓰기)
+- 파일 개수 표시로 정보 제공
+
+### 3. 코드 재사용
+
+**공통 함수 추출**:
+- `enable_clipboard_operations()`: 모든 텍스트 위젯에 재사용
+- `compare_text_detailed()`: 폴더/텍스트/파일 비교 모두 사용
+- `setup_scroll_sync()`: 모든 쌍 텍스트 위젯에 적용
+
+### 4. 플랫폼 독립성
+
+**OS 감지 후 분기**:
+```python
+self.is_macos = (platform.system() == 'Darwin')
+
+if self.is_macos:
+    # macOS 전용 코드
+else:
+    # Windows/Linux 코드
+```
+
+**경로 처리**:
+```python
+os.path.join()  # OS별 경로 구분자 자동 처리
+os.sep          # 현재 OS의 경로 구분자
+```
+
+---
+
+**문서 버전**: 2.0 (Deep Analysis)
 **최종 수정**: 2024-11-18
-**작성자**: Claude AI Analysis
+**작성자**: Claude AI Deep Analysis
