@@ -1,3 +1,9 @@
-# 기본 Python 라이브러리만 사용
-# tkinter는 Python 기본 내장 라이브러리입니다.
-# Python 3.7 이상 필요
+# Python 3.7 이상 필요 (tkinter는 기본 내장)
+ttkbootstrap>=1.10.1
+
+# (선택) tkextrafont: tkinter에 OTF를 동적 등록하는 크로스 플랫폼 라이브러리.
+# - macOS / Linux: 미설치여도 OK. 앱이 자동으로 OTF를 ~/Library/Fonts/Conferatur/ (mac)
+#   또는 ~/.fonts/Conferatur/ (linux)에 복사해 시스템 폰트로 등록합니다.
+# - Windows: 미설치 시 ctypes(AddFontResourceExW) 폴백을 사용합니다.
+# - macOS에서 빌드 의존성(cmake) 없이 쓰려면 이 줄을 주석 처리하면 됩니다.
+# tkextrafont>=0.4.0

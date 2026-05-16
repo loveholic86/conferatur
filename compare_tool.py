@@ -12,7 +12,10 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import filedialog, messagebox, scrolledtext, simpledialog
 import tkinter as tk
+import tkinter.font as tkfont
 import os
+import sys
+import platform as _platform_mod
 import hashlib
 import difflib
 import shutil
@@ -20,6 +23,547 @@ import json
 import fnmatch
 from datetime import datetime
 from pathlib import Path
+
+
+PRETENDARD_FONT_DIR = Path(__file__).resolve().parent / 'font' / 'PretendardStd'
+
+
+def register_pretendard_fonts(root=None):
+    """Register bundled PretendardStd OTFs so tkinter can resolve 'Pretendard Std'.
+
+    Strategy (in order):
+      1) tkextrafont (optional, cross-platform) — silently skipped if not installed.
+      2) macOS: copy OTFs into ~/Library/Fonts/Conferatur/ (one-time, user scope, no admin).
+      3) Linux: copy OTFs into ~/.fonts/Conferatur/ (one-time, user scope; fc-cache refresh).
+      4) Windows: AddFontResourceExW with FR_PRIVATE (no admin needed).
+    Returns the number of font files successfully registered/installed.
+    """
+    if not PRETENDARD_FONT_DIR.is_dir():
+        return 0
+
+    otf_files = sorted(PRETENDARD_FONT_DIR.glob('*.otf'))
+    if not otf_files:
+        return 0
+
+    registered = 0
+
+    try:
+        from tkextrafont import Font as _ExtraFont  # type: ignore
+    except Exception:
+        _ExtraFont = None
+
+    if _ExtraFont is not None:
+        for otf in otf_files:
+            try:
+                _ExtraFont(root=root, file=str(otf))
+                registered += 1
+            except Exception as exc:  # noqa: BLE001
+                print(f"[font] tkextrafont 등록 실패: {otf.name} ({exc})", file=sys.stderr)
+        if registered:
+            return registered
+
+    system = _platform_mod.system()
+
+    if system == 'Darwin':
+        try:
+            target_dir = Path.home() / 'Library' / 'Fonts' / 'Conferatur'
+            target_dir.mkdir(parents=True, exist_ok=True)
+            for otf in otf_files:
+                dest = target_dir / otf.name
+                if not dest.exists():
+                    shutil.copy2(otf, dest)
+                registered += 1
+        except Exception as exc:  # noqa: BLE001
+            print(f"[font] macOS 폰트 설치 실패: {exc}", file=sys.stderr)
+        return registered
+
+    if system == 'Linux':
+        try:
+            target_dir = Path.home() / '.fonts' / 'Conferatur'
+            target_dir.mkdir(parents=True, exist_ok=True)
+            for otf in otf_files:
+                dest = target_dir / otf.name
+                if not dest.exists():
+                    shutil.copy2(otf, dest)
+                registered += 1
+            try:
+                import subprocess
+                subprocess.run(['fc-cache', '-f', str(target_dir)],
+                               check=False, capture_output=True, timeout=10)
+            except Exception:
+                pass
+        except Exception as exc:  # noqa: BLE001
+            print(f"[font] Linux 폰트 설치 실패: {exc}", file=sys.stderr)
+        return registered
+
+    if system == 'Windows':
+        try:
+            import ctypes
+            FR_PRIVATE = 0x10
+            gdi32 = ctypes.windll.gdi32
+            for otf in otf_files:
+                added = gdi32.AddFontResourceExW(str(otf), FR_PRIVATE, 0)
+                if added:
+                    registered += added
+        except Exception as exc:  # noqa: BLE001
+            print(f"[font] Windows AddFontResourceExW 실패: {exc}", file=sys.stderr)
+
+    return registered
+
+
+NOTION_COLORS = {
+    'primary': '#6E4FF6',
+    'primary_hover': '#5B3FE6',
+    'purple_ink': '#5B3FE6',
+    'brand_navy': '#1F2937',
+    'canvas': '#FFFFFF',
+    'surface': '#F7F6F3',
+    'hairline': '#E9E9E7',
+    'ink': '#37352F',
+    'slate': '#787774',
+    'link_blue': '#0B6E99',
+    'peach': '#FBECDD',
+    'rose': '#FBE4E4',
+    'rose_ink': '#9B2C2C',
+    'mint': '#DEF4E8',
+    'mint_ink': '#2D6A4F',
+    'lavender': '#E8DEEE',
+    'sky': '#DDEBF1',
+    'yellow': '#FBF3DB',
+    'yellow_bold': '#F5C13D',
+    'success': '#68B984',
+    'warning': '#F0995C',
+    'error': '#E25C5C',
+}
+
+NOTION_UI_FONT_CANDIDATES = (
+    'Pretendard Std',
+    'PretendardStd',
+    'Pretendard',
+    'Inter',
+    'SF Pro Display',
+    '-apple-system',
+    'Segoe UI',
+    'Apple SD Gothic Neo',
+    'Malgun Gothic',
+    'Helvetica',
+    'Arial',
+)
+
+BUTTON_SPACING = 8
+BUTTON_GROUP_SPACING = 12
+BUTTON_PADDING = (14, 8)
+COMPACT_BUTTON_PADDING = (10, 6)
+DEFAULT_TEXT_FONT_SIZE = 14
+SECTION_PADDING = 16
+SECTION_GAP = 24
+
+BUTTON_STYLE_BY_ROLE = {
+    'primary': 'Modern.Primary.TButton',
+    'secondary': 'Modern.Secondary.TButton',
+    'success': 'Modern.Success.TButton',
+    'destructive': 'Modern.Destructive.TButton',
+    'ghost': 'Modern.Ghost.TButton',
+}
+
+COMPACT_BUTTON_STYLE_BY_ROLE = {
+    'primary': 'Modern.Primary.Compact.TButton',
+    'secondary': 'Modern.Secondary.Compact.TButton',
+    'success': 'Modern.Success.Compact.TButton',
+    'destructive': 'Modern.Destructive.Compact.TButton',
+    'ghost': 'Modern.Ghost.Compact.TButton',
+}
+
+
+def resolve_ui_font(root):
+    """Use Inter when installed, otherwise keep a native-looking fallback."""
+    try:
+        available_fonts = set(tkfont.families(root))
+        for font_family in NOTION_UI_FONT_CANDIDATES:
+            if font_family in available_fonts:
+                return font_family
+    except tk.TclError:
+        pass
+    return 'Helvetica'
+
+
+def setup_notion_styles(root):
+    """Apply the Notion visual system to ttkbootstrap without changing behavior."""
+    colors = NOTION_COLORS
+    style = root.style if hasattr(root, 'style') else ttk.Style()
+    ui_font = resolve_ui_font(root)
+    body_font = (ui_font, DEFAULT_TEXT_FONT_SIZE)
+    button_font = (ui_font, DEFAULT_TEXT_FONT_SIZE, 'normal')
+    compact_button_font = (ui_font, DEFAULT_TEXT_FONT_SIZE - 1, 'normal')
+    heading_font = (ui_font, DEFAULT_TEXT_FONT_SIZE + 1, 'bold')
+
+    try:
+        root.configure(bg=colors['surface'])
+    except tk.TclError:
+        pass
+
+    def configure(style_name, **kwargs):
+        try:
+            style.configure(style_name, **kwargs)
+        except tk.TclError:
+            pass
+
+    def map_style(style_name, **kwargs):
+        try:
+            style.map(style_name, **kwargs)
+        except tk.TclError:
+            pass
+
+    configure('.', background=colors['surface'], foreground=colors['ink'], font=body_font)
+    configure('TFrame', background=colors['surface'])
+    configure('TLabel', background=colors['surface'], foreground=colors['ink'], font=body_font)
+    configure('TLabelframe', background=colors['surface'], bordercolor=colors['hairline'], relief='solid')
+    configure('TLabelframe.Label', background=colors['surface'], foreground=colors['ink'], font=heading_font)
+    configure('TEntry',
+              fieldbackground=colors['canvas'],
+              foreground=colors['ink'],
+              bordercolor=colors['hairline'],
+              lightcolor=colors['hairline'],
+              darkcolor=colors['hairline'],
+              insertcolor=colors['primary'],
+              padding=(8, 6))
+    configure('TCombobox',
+              fieldbackground=colors['canvas'],
+              foreground=colors['ink'],
+              bordercolor=colors['hairline'],
+              arrowcolor=colors['slate'],
+              padding=(8, 5))
+    configure('TSpinbox',
+              fieldbackground=colors['canvas'],
+              foreground=colors['ink'],
+              bordercolor=colors['hairline'],
+              arrowcolor=colors['slate'],
+              padding=(8, 5))
+    configure('TRadiobutton', background=colors['surface'], foreground=colors['ink'], font=body_font)
+    configure('TScrollbar',
+              background=colors['hairline'],
+              troughcolor=colors['surface'],
+              bordercolor=colors['surface'],
+              arrowcolor=colors['slate'])
+    configure('TNotebook',
+              background=colors['surface'],
+              bordercolor=colors['hairline'],
+              tabmargins=(6, 6, 6, 0))
+    configure('TNotebook.Tab',
+              background=colors['surface'],
+              foreground=colors['slate'],
+              padding=(16, 8),
+              font=button_font)
+    map_style('TNotebook.Tab',
+              background=[('selected', colors['canvas']), ('active', colors['sky'])],
+              foreground=[('selected', colors['ink']), ('active', colors['ink'])])
+    configure('Treeview',
+              background=colors['canvas'],
+              fieldbackground=colors['canvas'],
+              foreground=colors['ink'],
+              bordercolor=colors['hairline'],
+              rowheight=32,
+              font=body_font)
+    configure('Treeview.Heading',
+              background=colors['surface'],
+              foreground=colors['ink'],
+              bordercolor=colors['hairline'],
+              font=heading_font,
+              padding=(8, 6))
+    map_style('Treeview',
+              background=[('selected', colors['lavender'])],
+              foreground=[('selected', colors['purple_ink'])])
+
+    button_styles = {
+        'TButton': (colors['canvas'], colors['ink'], colors['hairline'], colors['surface']),
+        'primary.TButton': (colors['lavender'], colors['purple_ink'], colors['lavender'], colors['sky']),
+        'success.TButton': (colors['mint'], colors['mint_ink'], colors['mint'], colors['surface']),
+        'info.TButton': (colors['sky'], colors['link_blue'], colors['sky'], colors['surface']),
+        'warning.TButton': (colors['yellow'], colors['ink'], colors['yellow'], colors['surface']),
+        'danger.TButton': (colors['rose'], colors['rose_ink'], colors['rose'], colors['surface']),
+    }
+
+    for style_name, (background, foreground, border, active_background) in button_styles.items():
+        configure(style_name,
+                  background=background,
+                  foreground=foreground,
+                  bordercolor=border,
+                  lightcolor=border,
+                  darkcolor=border,
+                  focusthickness=1,
+                  focuscolor=border,
+                  padding=BUTTON_PADDING,
+                  font=button_font)
+        map_style(style_name,
+                  background=[('pressed', active_background), ('active', active_background), ('disabled', colors['hairline'])],
+                  foreground=[('disabled', colors['slate'])])
+
+    modern_button_styles = {
+        'Modern.Primary.TButton': {
+            'background': colors['lavender'],
+            'foreground': colors['purple_ink'],
+            'bordercolor': colors['lavender'],
+            'active_background': colors['sky'],
+            'active_foreground': colors['purple_ink'],
+            'padding': BUTTON_PADDING,
+            'font': button_font,
+        },
+        'Modern.Secondary.TButton': {
+            'background': colors['surface'],
+            'foreground': colors['ink'],
+            'bordercolor': colors['hairline'],
+            'active_background': colors['canvas'],
+            'active_foreground': colors['ink'],
+            'padding': BUTTON_PADDING,
+            'font': button_font,
+        },
+        'Modern.Success.TButton': {
+            'background': colors['mint'],
+            'foreground': colors['mint_ink'],
+            'bordercolor': colors['mint'],
+            'active_background': colors['surface'],
+            'active_foreground': colors['mint_ink'],
+            'padding': BUTTON_PADDING,
+            'font': button_font,
+        },
+        'Modern.Destructive.TButton': {
+            'background': colors['rose'],
+            'foreground': colors['rose_ink'],
+            'bordercolor': colors['rose'],
+            'active_background': colors['rose'],
+            'active_foreground': colors['rose_ink'],
+            'padding': BUTTON_PADDING,
+            'font': button_font,
+        },
+        'Modern.Ghost.TButton': {
+            'background': colors['canvas'],
+            'foreground': colors['ink'],
+            'bordercolor': colors['hairline'],
+            'active_background': colors['surface'],
+            'active_foreground': colors['ink'],
+            'padding': BUTTON_PADDING,
+            'font': button_font,
+        },
+        'Modern.Primary.Compact.TButton': {
+            'background': colors['lavender'],
+            'foreground': colors['purple_ink'],
+            'bordercolor': colors['lavender'],
+            'active_background': colors['sky'],
+            'active_foreground': colors['purple_ink'],
+            'padding': COMPACT_BUTTON_PADDING,
+            'font': compact_button_font,
+        },
+        'Modern.Secondary.Compact.TButton': {
+            'background': colors['surface'],
+            'foreground': colors['ink'],
+            'bordercolor': colors['hairline'],
+            'active_background': colors['canvas'],
+            'active_foreground': colors['ink'],
+            'padding': COMPACT_BUTTON_PADDING,
+            'font': compact_button_font,
+        },
+        'Modern.Success.Compact.TButton': {
+            'background': colors['mint'],
+            'foreground': colors['mint_ink'],
+            'bordercolor': colors['mint'],
+            'active_background': colors['surface'],
+            'active_foreground': colors['mint_ink'],
+            'padding': COMPACT_BUTTON_PADDING,
+            'font': compact_button_font,
+        },
+        'Modern.Destructive.Compact.TButton': {
+            'background': colors['rose'],
+            'foreground': colors['rose_ink'],
+            'bordercolor': colors['rose'],
+            'active_background': colors['rose'],
+            'active_foreground': colors['rose_ink'],
+            'padding': COMPACT_BUTTON_PADDING,
+            'font': compact_button_font,
+        },
+        'Modern.Ghost.Compact.TButton': {
+            'background': colors['canvas'],
+            'foreground': colors['ink'],
+            'bordercolor': colors['hairline'],
+            'active_background': colors['surface'],
+            'active_foreground': colors['ink'],
+            'padding': COMPACT_BUTTON_PADDING,
+            'font': compact_button_font,
+        },
+    }
+
+    for style_name, options in modern_button_styles.items():
+        border = options['bordercolor']
+        configure(style_name,
+                  background=options['background'],
+                  foreground=options['foreground'],
+                  bordercolor=border,
+                  lightcolor=border,
+                  darkcolor=border,
+                  focusthickness=1,
+                  focuscolor=border,
+                  padding=options['padding'],
+                  font=options['font'])
+        map_style(style_name,
+                  background=[('pressed', options['active_background']),
+                              ('active', options['active_background']),
+                              ('disabled', colors['hairline'])],
+                  foreground=[('pressed', options['active_foreground']),
+                              ('active', options['active_foreground']),
+                              ('disabled', colors['slate'])],
+                  bordercolor=[('pressed', options['active_foreground']),
+                               ('active', options['active_foreground']),
+                               ('disabled', colors['hairline'])])
+
+    return ui_font
+
+
+def build_button_text(label, icon=None):
+    if icon:
+        return f"{icon} {label}"
+    return label
+
+
+def create_action_button(parent, label, command, role='secondary', icon=None,
+                         compact=False, width=None, state=None, **kwargs):
+    """Create a consistent modern action button while preserving callbacks."""
+    style_map = COMPACT_BUTTON_STYLE_BY_ROLE if compact else BUTTON_STYLE_BY_ROLE
+    button_options = {
+        'text': build_button_text(label, icon),
+        'command': command,
+        'style': style_map.get(role, BUTTON_STYLE_BY_ROLE['secondary']),
+    }
+    if width is not None:
+        button_options['width'] = width
+    if state is not None:
+        button_options['state'] = state
+    button_options.update(kwargs)
+    return ttk.Button(parent, **button_options)
+
+
+def build_button_row(parent, specs, align='right', gap=BUTTON_SPACING, pady=(8, 0)):
+    row = ttk.Frame(parent)
+    row.pack(fill='x', pady=pady)
+
+    if align == 'left':
+        side = 'left'
+        ordered_specs = specs
+    else:
+        side = 'right'
+        ordered_specs = list(reversed(specs))
+
+    buttons = []
+    for index, spec in enumerate(ordered_specs):
+        button = create_action_button(row, **spec)
+        pad = (0, gap) if side == 'right' and index < len(ordered_specs) - 1 else (gap, 0)
+        if side == 'left':
+            pad = (0, gap) if index < len(ordered_specs) - 1 else (0, 0)
+        button.pack(side=side, padx=pad)
+        buttons.append(button)
+
+    return row, list(reversed(buttons)) if align != 'left' else buttons
+
+
+def build_toolbar(parent, left_specs=None, right_specs=None, pady=(8, 8)):
+    toolbar = ttk.Frame(parent)
+    toolbar.pack(fill='x', pady=pady)
+
+    left_buttons = []
+    right_buttons = []
+    if left_specs:
+        for index, spec in enumerate(left_specs):
+            button = create_action_button(toolbar, **spec)
+            padx = (0, BUTTON_SPACING) if index < len(left_specs) - 1 else (0, 0)
+            button.pack(side='left', padx=padx)
+            left_buttons.append(button)
+
+    if right_specs:
+        for index, spec in enumerate(reversed(right_specs)):
+            button = create_action_button(toolbar, **spec)
+            padx = (0, BUTTON_SPACING) if index < len(right_specs) - 1 else (0, 0)
+            button.pack(side='right', padx=padx)
+            right_buttons.append(button)
+
+    return toolbar, left_buttons, list(reversed(right_buttons))
+
+
+def build_history_favorite_row(parent, app, category):
+    specs = [
+        {
+            'label': '히스토리',
+            'icon': '📜',
+            'command': lambda: app.load_from_history(category),
+            'role': 'ghost',
+            'compact': True,
+        },
+        {
+            'label': '즐겨찾기 불러오기',
+            'icon': '⭐',
+            'command': lambda: app.load_from_favorite(category),
+            'role': 'ghost',
+            'compact': True,
+        },
+        {
+            'label': '즐겨찾기 추가',
+            'icon': '＋',
+            'command': lambda: app.add_to_favorite(category),
+            'role': 'ghost',
+            'compact': True,
+        },
+    ]
+    return build_button_row(parent, specs, align='left', gap=BUTTON_SPACING, pady=(0, 12))
+
+
+def notion_text_options(font=None):
+    colors = NOTION_COLORS
+    options = {
+        'bg': colors['canvas'],
+        'fg': colors['ink'],
+        'insertbackground': colors['primary'],
+        'selectbackground': colors['sky'],
+        'selectforeground': colors['ink'],
+        'relief': 'solid',
+        'borderwidth': 1,
+        'highlightthickness': 1,
+        'highlightbackground': colors['hairline'],
+        'highlightcolor': colors['primary'],
+    }
+    if font is not None:
+        options['font'] = font
+    return options
+
+
+def configure_notion_text_widget(widget, font=None):
+    if font is None:
+        try:
+            font = (resolve_ui_font(widget.winfo_toplevel()), DEFAULT_TEXT_FONT_SIZE)
+        except tk.TclError:
+            font = ('Helvetica', DEFAULT_TEXT_FONT_SIZE)
+    widget.config(**notion_text_options(font))
+
+
+def configure_notion_diff_tag(widget, font_family, font_size):
+    widget.tag_config('diff',
+                      background=NOTION_COLORS['yellow'],
+                      foreground=NOTION_COLORS['error'],
+                      font=(font_family, font_size, 'bold'))
+
+
+def configure_notion_listbox(listbox, font=None):
+    colors = NOTION_COLORS
+    options = {
+        'bg': colors['canvas'],
+        'fg': colors['ink'],
+        'selectbackground': colors['lavender'],
+        'selectforeground': colors['ink'],
+        'highlightthickness': 1,
+        'highlightbackground': colors['hairline'],
+        'highlightcolor': colors['primary'],
+        'relief': 'solid',
+        'borderwidth': 1,
+    }
+    if font is not None:
+        options['font'] = font
+    listbox.config(**options)
 
 
 class DataManager:
@@ -41,8 +585,8 @@ class DataManager:
             'text_favorites': [],
             'file_history': [],
             'file_favorites': [],
-            'font_family': 'Consolas',  # 기본 폰트
-            'font_size': 10,             # 기본 폰트 크기
+            'font_family': 'Pretendard Std',  # 기본 폰트 (PretendardStd OTF 번들)
+            'font_size': DEFAULT_TEXT_FONT_SIZE,  # 신규 사용자 기본 폰트 크기
             'exclude_patterns': []       # 폴더 비교 제외 패턴
         }
 
@@ -188,8 +732,8 @@ class DataManager:
     def get_font_settings(self):
         """폰트 설정 가져오기"""
         return {
-            'family': self.data.get('font_family', 'Consolas'),
-            'size': self.data.get('font_size', 10)
+            'family': self.data.get('font_family', 'Pretendard Std'),
+            'size': self.data.get('font_size', DEFAULT_TEXT_FONT_SIZE)
         }
 
     def set_font_settings(self, family, size):
@@ -223,10 +767,11 @@ class CompareToolApp:
         os_name = "macOS" if self.is_macos else ("Windows" if self.is_windows else "Linux")
         self.root.title(f"📂 파일/폴더 비교 도구 [{os_name}]")
         self.root.geometry("1300x850")
+        self.root.minsize(1280, 800)
 
         # OS 정보 출력
         print(f"=== 파일/폴더 비교 도구 시작 ===")
-        print(f"테마: minty (ttkbootstrap)")
+        print(f"테마: minty + Notion overrides (ttkbootstrap)")
         print(f"운영체제: {self.system} ({os_name})")
         if self.is_macos:
             print(f"키보드 단축키: Cmd+C (복사), Cmd+V (붙여넣기), Cmd+X (잘라내기), Cmd+A (전체선택)")
@@ -299,56 +844,73 @@ class CompareToolApp:
 
         # 상단 컨트롤 영역
         control_frame = ttk.Frame(frame)
-        control_frame.pack(fill='x', padx=10, pady=10)
+        control_frame.pack(fill='x', padx=SECTION_PADDING, pady=SECTION_PADDING)
 
         # 히스토리 및 즐겨찾기 버튼
         history_fav_frame = ttk.Frame(control_frame)
-        history_fav_frame.grid(row=0, column=0, columnspan=3, sticky='w', pady=5)
-
-        ttk.Button(history_fav_frame, text="📜 히스토리에서 불러오기",
-                  command=lambda: self.load_from_history('folder')).pack(side='left', padx=5)
-        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에서 불러오기",
-                  command=lambda: self.load_from_favorite('folder')).pack(side='left', padx=5)
-        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에 추가",
-                  command=lambda: self.add_to_favorite('folder')).pack(side='left', padx=5)
+        history_fav_frame.grid(row=0, column=0, columnspan=3, sticky='w', pady=(0, 12))
+        build_history_favorite_row(history_fav_frame, self, 'folder')
 
         # 왼쪽 폴더 선택
-        ttk.Label(control_frame, text="왼쪽 폴더:").grid(row=1, column=0, sticky='w', padx=5, pady=5)
+        ttk.Label(control_frame, text="왼쪽 폴더:").grid(row=1, column=0, sticky='w', padx=(0, 8), pady=5)
         self.left_folder_var = tk.StringVar()
         self.left_folder_entry = ttk.Entry(control_frame, textvariable=self.left_folder_var)
-        self.left_folder_entry.grid(row=1, column=1, sticky='ew', padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_folder(self.left_folder_var, self.left_folder_entry)).grid(row=1, column=2, padx=5, pady=5)
+        self.left_folder_entry.grid(row=1, column=1, sticky='ew', padx=(0, 8), pady=5)
+        create_action_button(control_frame, "찾아보기",
+                             command=lambda: self.browse_folder(self.left_folder_var, self.left_folder_entry),
+                             role='secondary', icon='📁').grid(row=1, column=2, padx=0, pady=5)
 
         # 오른쪽 폴더 선택
-        ttk.Label(control_frame, text="오른쪽 폴더:").grid(row=2, column=0, sticky='w', padx=5, pady=5)
+        ttk.Label(control_frame, text="오른쪽 폴더:").grid(row=2, column=0, sticky='w', padx=(0, 8), pady=5)
         self.right_folder_var = tk.StringVar()
         self.right_folder_entry = ttk.Entry(control_frame, textvariable=self.right_folder_var)
-        self.right_folder_entry.grid(row=2, column=1, sticky='ew', padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_folder(self.right_folder_var, self.right_folder_entry)).grid(row=2, column=2, padx=5, pady=5)
+        self.right_folder_entry.grid(row=2, column=1, sticky='ew', padx=(0, 8), pady=5)
+        create_action_button(control_frame, "찾아보기",
+                             command=lambda: self.browse_folder(self.right_folder_var, self.right_folder_entry),
+                             role='secondary', icon='📁').grid(row=2, column=2, padx=0, pady=5)
 
         # Entry 위젯이 확장되도록 column 1에 weight 설정
         control_frame.columnconfigure(1, weight=1)
 
         # 비교 옵션
         option_frame = ttk.Frame(control_frame)
-        option_frame.grid(row=3, column=0, columnspan=3, pady=10)
+        option_frame.grid(row=3, column=0, columnspan=3, sticky='ew', pady=(12, 0))
 
         self.compare_method_var = tk.StringVar(value="md5")
-        ttk.Radiobutton(option_frame, text="🔍 MD5 비교", variable=self.compare_method_var, value="md5").pack(side='left', padx=10)
-        ttk.Radiobutton(option_frame, text="📅 날짜 비교", variable=self.compare_method_var, value="date").pack(side='left', padx=10)
-        ttk.Radiobutton(option_frame, text="🔍📅 MD5 + 날짜", variable=self.compare_method_var, value="both").pack(side='left', padx=10)
+        method_frame = ttk.Frame(option_frame)
+        method_frame.pack(side='left', fill='x', expand=True)
+        ttk.Radiobutton(method_frame, text="🔍 MD5 비교", variable=self.compare_method_var, value="md5").pack(side='left', padx=(0, 12))
+        ttk.Radiobutton(method_frame, text="📅 날짜 비교", variable=self.compare_method_var, value="date").pack(side='left', padx=(0, 12))
+        ttk.Radiobutton(method_frame, text="🔍📅 MD5 + 날짜", variable=self.compare_method_var, value="both").pack(side='left')
 
-        ttk.Button(option_frame, text="▶ 비교 시작", command=self.compare_folders, bootstyle='primary').pack(side='left', padx=20)
-        ttk.Button(option_frame, text="⚙️ 제외 패턴", command=self.open_exclude_patterns_dialog, bootstyle='info').pack(side='left', padx=5)
-        ttk.Button(option_frame, text="🔄 초기화", command=self.clear_folder_comparison).pack(side='left', padx=5)
+        action_frame = ttk.Frame(option_frame)
+        action_frame.pack(side='right')
+        build_button_row(action_frame, [
+            {'label': '초기화', 'icon': '↻', 'command': self.clear_folder_comparison, 'role': 'ghost'},
+            {'label': '제외 패턴', 'icon': '⚙️', 'command': self.open_exclude_patterns_dialog, 'role': 'secondary'},
+            {'label': '비교 시작', 'icon': '▶', 'command': self.compare_folders, 'role': 'primary'},
+        ], align='right', pady=(0, 0))
 
         # 결과 영역
         result_frame = ttk.Frame(frame)
-        result_frame.pack(fill='both', expand=True, padx=10, pady=10)
+        result_frame.pack(fill='both', expand=True, padx=SECTION_PADDING, pady=(0, SECTION_PADDING))
 
         # 트리뷰 생성
         tree_frame = ttk.Frame(result_frame)
         tree_frame.pack(fill='both', expand=True)
+
+        build_toolbar(tree_frame,
+                      left_specs=[
+                          {'label': '왼쪽 → 오른쪽 복사', 'icon': '📤',
+                           'command': lambda: self.copy_file('left_to_right'), 'role': 'secondary'},
+                          {'label': '오른쪽 → 왼쪽 복사', 'icon': '📥',
+                           'command': lambda: self.copy_file('right_to_left'), 'role': 'secondary'},
+                      ],
+                      right_specs=[
+                          {'label': '선택 항목 삭제', 'icon': '🗑️',
+                           'command': self.delete_selected, 'role': 'destructive'},
+                      ],
+                      pady=(0, 8))
 
         # 스크롤바
         tree_scroll_y = ttk.Scrollbar(tree_frame, orient='vertical')
@@ -406,17 +968,13 @@ class CompareToolApp:
         self.folder_tree.bind('<Button-2>', self.show_folder_tree_context_menu)
         self.folder_tree.bind('<Control-Button-1>', self.show_folder_tree_context_menu)
 
-        # 버튼 영역
-        button_frame = ttk.Frame(result_frame)
-        button_frame.pack(fill='x', pady=5)
-
-        ttk.Button(button_frame, text="📤 왼쪽 → 오른쪽 복사", command=lambda: self.copy_file('left_to_right'), bootstyle='success').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="📥 오른쪽 → 왼쪽 복사", command=lambda: self.copy_file('right_to_left'), bootstyle='success').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="🗑️ 선택 항목 삭제", command=self.delete_selected, bootstyle='danger').pack(side='left', padx=5)
-
         # 파일 내용 미리보기 영역
-        preview_label = ttk.Label(result_frame, text="파일 내용 미리보기 (파일을 선택하세요)", font=('', 10, 'bold'))
-        preview_label.pack(fill='x', pady=(10, 5))
+        preview_label = ttk.Label(
+            result_frame,
+            text="파일 내용 미리보기 (파일을 선택하세요)",
+            font=(self.font_family, DEFAULT_TEXT_FONT_SIZE, 'bold')
+        )
+        preview_label.pack(fill='x', pady=(16, 5))
 
         preview_frame = ttk.Frame(result_frame)
         preview_frame.pack(fill='both', expand=True, pady=5)
@@ -424,34 +982,32 @@ class CompareToolApp:
         # 왼쪽 파일 미리보기
         left_preview_frame = ttk.Frame(preview_frame)
         left_preview_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(left_preview_frame, text="왼쪽 파일", font=('', 9, 'bold')).pack()
+        ttk.Label(
+            left_preview_frame,
+            text="왼쪽 파일",
+            font=(self.font_family, DEFAULT_TEXT_FONT_SIZE - 1, 'bold')
+        ).pack()
         self.folder_preview_left = scrolledtext.ScrolledText(left_preview_frame, wrap='word', width=40, height=15, state='disabled')
         self.folder_preview_left.pack(fill='both', expand=True)
 
         # 오른쪽 파일 미리보기
         right_preview_frame = ttk.Frame(preview_frame)
         right_preview_frame.pack(side='left', fill='both', expand=True, padx=5)
-        ttk.Label(right_preview_frame, text="오른쪽 파일", font=('', 9, 'bold')).pack()
+        ttk.Label(
+            right_preview_frame,
+            text="오른쪽 파일",
+            font=(self.font_family, DEFAULT_TEXT_FONT_SIZE - 1, 'bold')
+        ).pack()
         self.folder_preview_right = scrolledtext.ScrolledText(right_preview_frame, wrap='word', width=40, height=15, state='disabled')
         self.folder_preview_right.pack(fill='both', expand=True)
 
-        # 텍스트 위젯 Bootstrap 스타일
-        self.folder_preview_left.config(bg='white', fg='#333',
-                                       font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
-                                       highlightthickness=1, highlightbackground='#ccc',
-                                       highlightcolor='#78C2AD')
-        self.folder_preview_right.config(bg='white', fg='#333',
-                                        font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
-                                        highlightthickness=1, highlightbackground='#ccc',
-                                        highlightcolor='#78C2AD')
+        # 텍스트 위젯 Notion 스타일
+        configure_notion_text_widget(self.folder_preview_left, (self.font_family, self.font_size))
+        configure_notion_text_widget(self.folder_preview_right, (self.font_family, self.font_size))
 
-        # 차이점 표시 - Bootstrap Warning 스타일
-        self.folder_preview_left.tag_config('diff', background='#fff9e6',
-                                           foreground='#ff6b6b',
-                                           font=(self.font_family, self.font_size, 'bold'))
-        self.folder_preview_right.tag_config('diff', background='#fff9e6',
-                                            foreground='#ff6b6b',
-                                            font=(self.font_family, self.font_size, 'bold'))
+        # 차이점 표시
+        configure_notion_diff_tag(self.folder_preview_left, self.font_family, self.font_size)
+        configure_notion_diff_tag(self.folder_preview_right, self.font_family, self.font_size)
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.folder_preview_left, self.folder_preview_right)
@@ -464,67 +1020,55 @@ class CompareToolApp:
         control_frame = ttk.Frame(frame)
         control_frame.pack(fill='x', padx=10, pady=10)
 
-        # 히스토리 및 즐겨찾기 버튼
+        # 히스토리 및 즐겨찾기 버튼 (compact ghost row)
         history_fav_frame = ttk.Frame(control_frame)
-        history_fav_frame.pack(fill='x', pady=5)
+        history_fav_frame.pack(fill='x', pady=(0, SECTION_PADDING // 2))
+        build_history_favorite_row(history_fav_frame, self, 'text')
 
-        ttk.Button(history_fav_frame, text="📜 히스토리에서 불러오기",
-                  command=lambda: self.load_from_history('text')).pack(side='left', padx=5)
-        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에서 불러오기",
-                  command=lambda: self.load_from_favorite('text')).pack(side='left', padx=5)
-        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에 추가",
-                  command=lambda: self.add_to_favorite('text')).pack(side='left', padx=5)
-
-        # 비교 버튼
-        button_frame = ttk.Frame(control_frame)
-        button_frame.pack(fill='x', pady=5)
-
-        ttk.Button(button_frame, text="▶ 비교하기", command=self.compare_text, bootstyle='primary').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="📥 왼쪽으로 적용", command=lambda: self.apply_text('to_left'), bootstyle='success').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="📤 오른쪽으로 적용", command=lambda: self.apply_text('to_right'), bootstyle='success').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="🔄 초기화", command=self.clear_text_comparison).pack(side='left', padx=5)
+        # 액션 toolbar: 비교 primary 좌측, 적용/초기화 우측
+        build_toolbar(
+            control_frame,
+            left_specs=[
+                {'label': '비교하기', 'icon': '▶', 'command': self.compare_text, 'role': 'primary'},
+            ],
+            right_specs=[
+                {'label': '왼쪽으로 적용', 'icon': '📥',
+                 'command': lambda: self.apply_text('to_left'), 'role': 'success'},
+                {'label': '오른쪽으로 적용', 'icon': '📤',
+                 'command': lambda: self.apply_text('to_right'), 'role': 'success'},
+                {'label': '초기화', 'icon': '🔄',
+                 'command': self.clear_text_comparison, 'role': 'ghost'},
+            ],
+            pady=(0, SECTION_PADDING // 2),
+        )
 
         # 텍스트 입력 영역
         text_frame = ttk.Frame(frame)
         text_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
-        # 왼쪽 텍스트 - Bootstrap Card Style
+        # 왼쪽 텍스트
         left_frame = ttk.Labelframe(text_frame, text=" 📝 왼쪽 텍스트 ", padding=10)
         left_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
         self.text_left = scrolledtext.ScrolledText(left_frame, wrap='word', width=40, height=30,
-                                                   bg='white', fg='#333',
-                                                   font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
-                                                   highlightthickness=1,
-                                                   highlightbackground='#ccc',
-                                                   highlightcolor='#78C2AD',
-                                                   insertbackground='#78C2AD')
+                                                   font=(self.font_family, self.font_size))
         self.text_left.pack(fill='both', expand=True)
+        configure_notion_text_widget(self.text_left, (self.font_family, self.font_size))
 
-        # 오른쪽 텍스트 - Bootstrap Card Style
+        # 오른쪽 텍스트
         right_frame = ttk.Labelframe(text_frame, text=" 📝 오른쪽 텍스트 ", padding=10)
         right_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
         self.text_right = scrolledtext.ScrolledText(right_frame, wrap='word', width=40, height=30,
-                                                    bg='white', fg='#333',
-                                                    font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
-                                                    highlightthickness=1,
-                                                    highlightbackground='#ccc',
-                                                    highlightcolor='#78C2AD',
-                                                    insertbackground='#78C2AD')
+                                                    font=(self.font_family, self.font_size))
         self.text_right.pack(fill='both', expand=True)
+        configure_notion_text_widget(self.text_right, (self.font_family, self.font_size))
 
         # 복사/붙여넣기 기능 활성화
         self.enable_clipboard_operations(self.text_left)
         self.enable_clipboard_operations(self.text_right)
 
-        # 차이점 표시 - Bootstrap Warning Alert 스타일
-        self.text_left.tag_config('diff',
-                                 background='#fff9e6',
-                                 foreground='#ff6b6b',
-                                 font=(self.font_family, self.font_size, 'bold'))
-        self.text_right.tag_config('diff',
-                                  background='#fff9e6',
-                                  foreground='#ff6b6b',
-                                  font=(self.font_family, self.font_size, 'bold'))
+        # 차이점 표시
+        configure_notion_diff_tag(self.text_left, self.font_family, self.font_size)
+        configure_notion_diff_tag(self.text_right, self.font_family, self.font_size)
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.text_left, self.text_right)
@@ -537,94 +1081,96 @@ class CompareToolApp:
         control_frame = ttk.Frame(frame)
         control_frame.pack(fill='x', padx=10, pady=10)
 
-        # 히스토리 및 즐겨찾기 버튼
+        # 히스토리 및 즐겨찾기 버튼 (compact ghost row)
         history_fav_frame = ttk.Frame(control_frame)
-        history_fav_frame.grid(row=0, column=0, columnspan=3, sticky='w', pady=5)
-
-        ttk.Button(history_fav_frame, text="📜 히스토리에서 불러오기",
-                  command=lambda: self.load_from_history('file')).pack(side='left', padx=5)
-        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에서 불러오기",
-                  command=lambda: self.load_from_favorite('file')).pack(side='left', padx=5)
-        ttk.Button(history_fav_frame, text="⭐ 즐겨찾기에 추가",
-                  command=lambda: self.add_to_favorite('file')).pack(side='left', padx=5)
+        history_fav_frame.grid(row=0, column=0, columnspan=3, sticky='w', pady=(0, 12))
+        build_history_favorite_row(history_fav_frame, self, 'file')
 
         # 왼쪽 파일 선택
-        ttk.Label(control_frame, text="왼쪽 파일:").grid(row=1, column=0, sticky='w', padx=5, pady=5)
+        ttk.Label(control_frame, text="왼쪽 파일:").grid(row=1, column=0, sticky='w', padx=(0, 8), pady=5)
         self.file_left_var = tk.StringVar()
         self.file_left_entry = ttk.Entry(control_frame, textvariable=self.file_left_var)
-        self.file_left_entry.grid(row=1, column=1, sticky='ew', padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_file(self.file_left_var, self.file_left_entry)).grid(row=1, column=2, padx=5, pady=5)
+        self.file_left_entry.grid(row=1, column=1, sticky='ew', padx=(0, 8), pady=5)
+        create_action_button(control_frame, "찾아보기",
+                             command=lambda: self.browse_file(self.file_left_var, self.file_left_entry),
+                             role='secondary', icon='📄').grid(row=1, column=2, padx=0, pady=5)
 
         # 오른쪽 파일 선택
-        ttk.Label(control_frame, text="오른쪽 파일:").grid(row=2, column=0, sticky='w', padx=5, pady=5)
+        ttk.Label(control_frame, text="오른쪽 파일:").grid(row=2, column=0, sticky='w', padx=(0, 8), pady=5)
         self.file_right_var = tk.StringVar()
         self.file_right_entry = ttk.Entry(control_frame, textvariable=self.file_right_var)
-        self.file_right_entry.grid(row=2, column=1, sticky='ew', padx=5, pady=5)
-        ttk.Button(control_frame, text="찾아보기", command=lambda: self.browse_file(self.file_right_var, self.file_right_entry)).grid(row=2, column=2, padx=5, pady=5)
+        self.file_right_entry.grid(row=2, column=1, sticky='ew', padx=(0, 8), pady=5)
+        create_action_button(control_frame, "찾아보기",
+                             command=lambda: self.browse_file(self.file_right_var, self.file_right_entry),
+                             role='secondary', icon='📄').grid(row=2, column=2, padx=0, pady=5)
 
         # Entry 위젯이 확장되도록 column 1에 weight 설정
         control_frame.columnconfigure(1, weight=1)
 
-        # 버튼 영역
+        # 액션 버튼 영역 (두 개의 toolbar)
         button_container = ttk.Frame(control_frame)
-        button_container.grid(row=3, column=0, columnspan=3, pady=10)
+        button_container.grid(row=3, column=0, columnspan=3, sticky='ew', pady=(12, 0))
 
-        # 첫 번째 줄: 비교 및 부분 복사
-        button_frame1 = ttk.Frame(button_container)
-        button_frame1.pack(fill='x', pady=(0, 5))
-        ttk.Button(button_frame1, text="▶ 비교하기", command=self.compare_files, bootstyle='primary').pack(side='left', padx=5)
-        ttk.Button(button_frame1, text="🔄 재비교 (편집 후)", command=self.recompare_files, bootstyle='info').pack(side='left', padx=5)
-        ttk.Button(button_frame1, text="◀ 왼쪽으로 복사 (블록)", command=self.copy_diff_to_left, bootstyle='warning').pack(side='left', padx=5)
-        ttk.Button(button_frame1, text="오른쪽으로 복사 ▶ (블록)", command=self.copy_diff_to_right, bootstyle='warning').pack(side='left', padx=5)
+        # Row 1: 비교/재비교 (좌) · 초기화 (우)
+        build_toolbar(
+            button_container,
+            left_specs=[
+                {'label': '비교하기', 'icon': '▶', 'command': self.compare_files, 'role': 'primary'},
+                {'label': '재비교 (편집 후)', 'icon': '🔄', 'command': self.recompare_files, 'role': 'secondary'},
+            ],
+            right_specs=[
+                {'label': '초기화', 'icon': '↻', 'command': self.clear_file_comparison, 'role': 'ghost'},
+            ],
+            pady=(0, 6),
+        )
 
-        # 두 번째 줄: 전체 덮어쓰기, 저장, 초기화
-        button_frame2 = ttk.Frame(button_container)
-        button_frame2.pack(fill='x')
-        ttk.Button(button_frame2, text="◀◀ 왼쪽으로 전체 덮어쓰기", command=self.copy_all_to_left, bootstyle='danger').pack(side='left', padx=5)
-        ttk.Button(button_frame2, text="오른쪽으로 전체 덮어쓰기 ▶▶", command=self.copy_all_to_right, bootstyle='danger').pack(side='left', padx=5)
-        ttk.Button(button_frame2, text="💾 왼쪽 파일 저장", command=lambda: self.save_file('left'), bootstyle='success').pack(side='left', padx=5)
-        ttk.Button(button_frame2, text="💾 오른쪽 파일 저장", command=lambda: self.save_file('right'), bootstyle='success').pack(side='left', padx=5)
-        ttk.Button(button_frame2, text="🔄 초기화", command=self.clear_file_comparison).pack(side='left', padx=5)
+        # Row 2: 블록/전체 덮어쓰기 (좌) · 좌·우 저장 (우)
+        build_toolbar(
+            button_container,
+            left_specs=[
+                {'label': '왼쪽 블록 복사', 'icon': '◀',
+                 'command': self.copy_diff_to_left, 'role': 'secondary'},
+                {'label': '오른쪽 블록 복사', 'icon': '▶',
+                 'command': self.copy_diff_to_right, 'role': 'secondary'},
+                {'label': '왼쪽 전체 덮어쓰기', 'icon': '◀◀',
+                 'command': self.copy_all_to_left, 'role': 'destructive'},
+                {'label': '오른쪽 전체 덮어쓰기', 'icon': '▶▶',
+                 'command': self.copy_all_to_right, 'role': 'destructive'},
+            ],
+            right_specs=[
+                {'label': '왼쪽 파일 저장', 'icon': '💾',
+                 'command': lambda: self.save_file('left'), 'role': 'success'},
+                {'label': '오른쪽 파일 저장', 'icon': '💾',
+                 'command': lambda: self.save_file('right'), 'role': 'success'},
+            ],
+            pady=(0, 0),
+        )
 
         # 파일 내용 표시 영역
         file_text_frame = ttk.Frame(frame)
         file_text_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
-        # 왼쪽 파일 내용 - Bootstrap Card Style (편집 가능)
+        # 왼쪽 파일 내용 (편집 가능)
         left_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 왼쪽 파일 내용 (편집 가능) ", padding=10)
         left_file_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
         self.file_text_left = scrolledtext.ScrolledText(left_file_frame, wrap='word', width=40, height=30,
-                                                        bg='white', fg='#333',
-                                                        font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
-                                                        highlightthickness=1,
-                                                        highlightbackground='#ccc',
-                                                        highlightcolor='#78C2AD',
-                                                        insertbackground='#78C2AD',
+                                                        font=(self.font_family, self.font_size),
                                                         state='normal')  # 편집 가능 상태
         self.file_text_left.pack(fill='both', expand=True)
+        configure_notion_text_widget(self.file_text_left, (self.font_family, self.font_size))
 
-        # 오른쪽 파일 내용 - Bootstrap Card Style (편집 가능)
+        # 오른쪽 파일 내용 (편집 가능)
         right_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 오른쪽 파일 내용 (편집 가능) ", padding=10)
         right_file_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
         self.file_text_right = scrolledtext.ScrolledText(right_file_frame, wrap='word', width=40, height=30,
-                                                         bg='white', fg='#333',
-                                                         font=(self.font_family, self.font_size), relief='solid', borderwidth=1,
-                                                         highlightthickness=1,
-                                                         highlightbackground='#ccc',
-                                                         highlightcolor='#78C2AD',
-                                                         insertbackground='#78C2AD',
+                                                         font=(self.font_family, self.font_size),
                                                          state='normal')  # 편집 가능 상태
         self.file_text_right.pack(fill='both', expand=True)
+        configure_notion_text_widget(self.file_text_right, (self.font_family, self.font_size))
 
-        # 차이점 표시 - Bootstrap Warning Alert 스타일
-        self.file_text_left.tag_config('diff',
-                                       background='#fff9e6',
-                                       foreground='#ff6b6b',
-                                       font=(self.font_family, self.font_size, 'bold'))
-        self.file_text_right.tag_config('diff',
-                                        background='#fff9e6',
-                                        foreground='#ff6b6b',
-                                        font=(self.font_family, self.font_size, 'bold'))
+        # 차이점 표시
+        configure_notion_diff_tag(self.file_text_left, self.font_family, self.font_size)
+        configure_notion_diff_tag(self.file_text_right, self.font_family, self.font_size)
 
         # 복사/붙여넣기 및 차이점 복사 기능 활성화
         self.enable_file_compare_context_menu(self.file_text_left, is_left=True)
@@ -1755,94 +2301,314 @@ class CompareToolApp:
         # 선택 창 열기
         self.show_selection_window(category, 'favorite', favorites)
 
-    def show_selection_window(self, category, data_type, items):
-        """선택 창 표시"""
-        win = tk.Toplevel(self.root)
-        win.title(f"{'히스토리' if data_type == 'history' else '즐겨찾기'} 선택")
-        win.geometry("900x500")
+    def _resolve_history_items(self, category, data_type):
+        """카테고리/타입에 해당하는 최신 데이터 가져오기"""
+        if category == 'folder':
+            return (self.data_manager.get_folder_history() if data_type == 'history'
+                    else self.data_manager.get_folder_favorites())
+        if category == 'file':
+            return (self.data_manager.get_file_history() if data_type == 'history'
+                    else self.data_manager.get_file_favorites())
+        return (self.data_manager.get_text_history() if data_type == 'history'
+                else self.data_manager.get_text_favorites())
 
-        # 상단 정보 레이블
-        info_frame = ttk.Frame(win)
-        info_frame.pack(fill='x', padx=10, pady=(10, 5))
+    def _history_item_title(self, item, data_type):
+        """항목의 #0 컬럼 표시 텍스트 (이름 또는 시각)"""
+        icon = '⭐' if data_type == 'favorite' else '📅'
+        primary = item.get('name') if data_type == 'favorite' else item.get('timestamp', '')
+        return f"{icon}  {primary or ''}"
 
-        info_text = f"{'히스토리' if data_type == 'history' else '즐겨찾기'} 목록 (총 {len(items)}개)"
-        ttk.Label(info_frame, text=info_text, font=('', 11, 'bold')).pack(anchor='w')
+    def _history_item_values(self, item, category):
+        """카테고리별 Treeview 컬럼 값"""
+        if category == 'folder':
+            return (item.get('left', ''), item.get('right', ''), item.get('method', ''))
+        if category == 'file':
+            return (item.get('left', ''), item.get('right', ''))
+        left = (item.get('left_preview') or '').replace('\n', ' ')[:60]
+        right = (item.get('right_preview') or '').replace('\n', ' ')[:60]
+        return (left, right)
 
-        # 리스트박스
-        frame = ttk.Frame(win)
-        frame.pack(fill='both', expand=True, padx=10, pady=5)
+    def _history_columns_spec(self, category):
+        """카테고리별 (columns tuple, headings dict, widths dict)"""
+        if category == 'folder':
+            return (('left', 'right', 'method'),
+                    {'left': '왼쪽 폴더', 'right': '오른쪽 폴더', 'method': '비교 방법'},
+                    {'left': 280, 'right': 280, 'method': 100})
+        if category == 'file':
+            return (('left', 'right'),
+                    {'left': '왼쪽 파일', 'right': '오른쪽 파일'},
+                    {'left': 340, 'right': 340})
+        return (('left_preview', 'right_preview'),
+                {'left_preview': '왼쪽 미리보기', 'right_preview': '오른쪽 미리보기'},
+                {'left_preview': 340, 'right_preview': 340})
 
-        scrollbar = ttk.Scrollbar(frame, orient='vertical')
+    def _build_history_tree(self, parent, category, data_type):
+        """Treeview + 수직 스크롤바를 감싼 컨테이너 생성. (container, tree) 반환."""
+        columns, headings, widths = self._history_columns_spec(category)
+
+        container = ttk.Frame(parent)
+
+        scrollbar = ttk.Scrollbar(container, orient='vertical')
         scrollbar.pack(side='right', fill='y')
 
-        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set,
-                            font=(self.font_family, self.font_size), height=15,
-                            selectmode='single', activestyle='dotbox')
-        listbox.pack(fill='both', expand=True)
-        scrollbar.config(command=listbox.yview)
+        tree = ttk.Treeview(container, columns=columns, show='tree headings',
+                            height=14, selectmode='browse',
+                            yscrollcommand=scrollbar.set)
+        tree.pack(side='left', fill='both', expand=True)
+        scrollbar.config(command=tree.yview)
 
-        def refresh_list():
-            """목록 새로고침"""
-            listbox.delete(0, 'end')
-            # 현재 데이터 다시 가져오기
-            if category == 'folder':
-                current_items = self.data_manager.get_folder_history() if data_type == 'history' else self.data_manager.get_folder_favorites()
-            elif category == 'file':
-                current_items = self.data_manager.get_file_history() if data_type == 'history' else self.data_manager.get_file_favorites()
+        head_text = '이름' if data_type == 'favorite' else '시각'
+        tree.heading('#0', text=head_text, anchor='w')
+        tree.column('#0', width=240, minwidth=140, anchor='w', stretch=False)
+        for col in columns:
+            tree.heading(col, text=headings[col], anchor='w')
+            tree.column(col, width=widths[col], minwidth=120, anchor='w', stretch=True)
+
+        tree.tag_configure('favorite', background=NOTION_COLORS['lavender'],
+                           foreground=NOTION_COLORS['purple_ink'])
+        tree.tag_configure('history', background=NOTION_COLORS['canvas'],
+                           foreground=NOTION_COLORS['ink'])
+
+        return container, tree
+
+    def _populate_history_tree(self, tree, items, category, data_type, search_text=''):
+        """현재 items를 Treeview에 채움. 검색 필터 적용. iid는 원본 index 문자열.
+        반환: (total, visible)"""
+        tree.delete(*tree.get_children())
+        needle = (search_text or '').strip().lower()
+        tag = 'favorite' if data_type == 'favorite' else 'history'
+
+        visible = 0
+        for idx, item in enumerate(items):
+            title = self._history_item_title(item, data_type)
+            values = self._history_item_values(item, category)
+            haystack = ' '.join([title] + [str(v) for v in values]).lower()
+            if needle and needle not in haystack:
+                continue
+            tree.insert('', 'end', iid=str(idx), text=title,
+                        values=values, tags=(tag,))
+            visible += 1
+
+        return len(items), visible
+
+    def _open_rename_dialog(self, parent_win, current_name):
+        """이름 변경용 작은 자식 모달. 확정 시 새 이름 문자열, 취소 시 None 반환."""
+        result = {'value': None}
+        dialog = tk.Toplevel(parent_win)
+        dialog.title("이름 변경")
+        dialog.transient(parent_win)
+        dialog.resizable(False, False)
+        try:
+            dialog.configure(bg=NOTION_COLORS['surface'])
+        except tk.TclError:
+            pass
+
+        body = ttk.Frame(dialog, padding=(20, 18, 20, 16))
+        body.pack(fill='both', expand=True)
+
+        ui_font = resolve_ui_font(dialog)
+        ttk.Label(body, text="새 이름을 입력하세요",
+                  font=(ui_font, 13, 'bold'),
+                  foreground=NOTION_COLORS['ink']).pack(anchor='w', pady=(0, 10))
+
+        entry_var = tk.StringVar(value=current_name or '')
+        entry = ttk.Entry(body, textvariable=entry_var, width=36)
+        entry.pack(fill='x', pady=(0, 14))
+
+        def on_ok(event=None):
+            new_name = entry_var.get().strip()
+            if not new_name:
+                return "break"
+            result['value'] = new_name
+            dialog.destroy()
+            return "break"
+
+        def on_cancel(event=None):
+            dialog.destroy()
+            return "break"
+
+        action_row = ttk.Frame(body)
+        action_row.pack(fill='x')
+        build_button_row(action_row, [
+            {'label': '취소', 'command': on_cancel, 'role': 'ghost'},
+            {'label': '확인', 'icon': '✓', 'command': on_ok, 'role': 'primary'},
+        ], align='right', pady=(0, 0))
+
+        entry.bind('<Return>', on_ok)
+        entry.bind('<Escape>', on_cancel)
+        dialog.bind('<Return>', on_ok)
+        dialog.bind('<Escape>', on_cancel)
+        dialog.protocol('WM_DELETE_WINDOW', on_cancel)
+
+        dialog.update_idletasks()
+        try:
+            pw = max(parent_win.winfo_width(), 1)
+            ph = max(parent_win.winfo_height(), 1)
+            dw = dialog.winfo_width()
+            dh = dialog.winfo_height()
+            px = parent_win.winfo_rootx() + (pw - dw) // 2
+            py = parent_win.winfo_rooty() + (ph - dh) // 2
+            dialog.geometry(f"+{max(px, 20)}+{max(py, 20)}")
+        except tk.TclError:
+            pass
+
+        dialog.grab_set()
+        entry.focus_set()
+        entry.select_range(0, 'end')
+        parent_win.wait_window(dialog)
+
+        # child grab 종료 후 parent grab 복원 (modal 유지)
+        try:
+            parent_win.grab_set()
+        except tk.TclError:
+            pass
+
+        return result['value']
+
+    def _build_history_listing_dialog(self, category, data_type, mode):
+        """히스토리/즐겨찾기 다이얼로그 공통 구현.
+
+        mode: 'select' (불러오기 다이얼로그) | 'manage' (관리 다이얼로그)
+        """
+        is_favorite = (data_type == 'favorite')
+        category_label = {'folder': '폴더 비교',
+                          'file': '파일 비교',
+                          'text': '텍스트 비교'}[category]
+        kind_icon = '⭐' if is_favorite else '📜'
+        kind_label = '즐겨찾기' if is_favorite else '히스토리'
+
+        win = tk.Toplevel(self.root)
+        win.title(f"{kind_icon} {kind_label} — {category_label}")
+        win.geometry("980x560")
+        win.minsize(720, 420)
+        win.resizable(True, True)
+        try:
+            win.configure(bg=NOTION_COLORS['surface'])
+        except tk.TclError:
+            pass
+        win.transient(self.root)
+
+        container = ttk.Frame(win, padding=(20, 18, 20, 16))
+        container.pack(fill='both', expand=True)
+
+        ui_font = resolve_ui_font(win)
+
+        # 헤더
+        header = ttk.Frame(container)
+        header.pack(fill='x', pady=(0, 14))
+        ttk.Label(header,
+                  text=f"{kind_icon}  {kind_label} — {category_label}",
+                  font=(ui_font, 19, 'bold'),
+                  foreground=NOTION_COLORS['ink']).pack(anchor='w')
+
+        count_var = tk.StringVar()
+        ttk.Label(header, textvariable=count_var,
+                  font=(ui_font, 13),
+                  foreground=NOTION_COLORS['slate']).pack(anchor='w', pady=(4, 0))
+
+        # 검색바 (placeholder 포함)
+        search_var = tk.StringVar()
+        search_row = ttk.Frame(container)
+        search_row.pack(fill='x', pady=(0, 12))
+        ttk.Label(search_row, text='🔍',
+                  font=(ui_font, 14),
+                  foreground=NOTION_COLORS['slate']).pack(side='left', padx=(0, 8))
+        search_entry = ttk.Entry(search_row, textvariable=search_var,
+                                 foreground=NOTION_COLORS['ink'])
+        search_entry.pack(side='left', fill='x', expand=True)
+
+        placeholder = '검색...'
+        placeholder_state = {'shown': False}
+
+        def show_placeholder():
+            if not search_var.get():
+                placeholder_state['shown'] = True
+                search_entry.configure(foreground=NOTION_COLORS['slate'])
+                search_entry.insert(0, placeholder)
+
+        def hide_placeholder():
+            if placeholder_state['shown']:
+                placeholder_state['shown'] = False
+                search_entry.delete(0, 'end')
+                search_entry.configure(foreground=NOTION_COLORS['ink'])
+
+        def on_search_focus_in(event=None):
+            hide_placeholder()
+
+        def on_search_focus_out(event=None):
+            if not search_var.get().strip():
+                show_placeholder()
+
+        search_entry.bind('<FocusIn>', on_search_focus_in)
+        search_entry.bind('<FocusOut>', on_search_focus_out)
+
+        # 본문 (Treeview 또는 빈 상태)
+        body = ttk.Frame(container)
+        body.pack(fill='both', expand=True)
+
+        empty_label = ttk.Label(body, text='',
+                                font=(ui_font, 14),
+                                foreground=NOTION_COLORS['slate'],
+                                anchor='center', justify='center')
+
+        tree_container, tree = self._build_history_tree(body, category, data_type)
+        tree_container.pack(fill='both', expand=True)
+
+        # 하단 hairline + 액션 영역
+        divider = tk.Frame(container, height=1,
+                           bg=NOTION_COLORS['hairline'],
+                           highlightthickness=0, bd=0)
+        divider.pack(fill='x', pady=(14, 12))
+
+        action_frame = ttk.Frame(container)
+        action_frame.pack(fill='x')
+
+        # 데이터 채우기 및 빈 상태 처리
+        state = {'items': []}
+
+        def refresh():
+            current_items = self._resolve_history_items(category, data_type)
+            state['items'] = current_items
+            effective_search = '' if placeholder_state['shown'] else search_var.get()
+            total, visible = self._populate_history_tree(
+                tree, current_items, category, data_type, effective_search
+            )
+            searching = bool(effective_search.strip())
+            if searching:
+                count_var.set(f"총 {total}개 · 검색 결과 {visible}개")
             else:
-                current_items = self.data_manager.get_text_history() if data_type == 'history' else self.data_manager.get_text_favorites()
+                count_var.set(f"총 {total}개")
 
-            # 항목 추가
-            for idx, item in enumerate(current_items):
-                if category == 'folder':
-                    if data_type == 'favorite':
-                        display = f"⭐ {item['name']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
-                    else:
-                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
-                elif category == 'file':
-                    if data_type == 'favorite':
-                        display = f"⭐ {item['name']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
-                    else:
-                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
-                else:  # text
-                    if data_type == 'favorite':
-                        display = f"⭐ {item['name']}\n   왼쪽: {item['left_preview']}\n   오른쪽: {item['right_preview']}"
-                    else:
-                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left_preview']}\n   오른쪽: {item['right_preview']}"
-                listbox.insert('end', display)
-                # 구분선 추가
-                if idx < len(current_items) - 1:
-                    listbox.insert('end', '─' * 80)
+            tree_container.pack_forget()
+            empty_label.pack_forget()
+            if total == 0:
+                empty_label.config(text="아직 항목이 없습니다.\n비교를 실행하거나 즐겨찾기를 추가해 보세요.")
+                empty_label.pack(fill='both', expand=True, pady=40)
+            elif visible == 0:
+                empty_label.config(text="검색 결과가 없습니다.\n다른 키워드로 시도해 보세요.")
+                empty_label.pack(fill='both', expand=True, pady=40)
+            else:
+                tree_container.pack(fill='both', expand=True)
 
-            # 정보 레이블 업데이트
-            info_text = f"{'히스토리' if data_type == 'history' else '즐겨찾기'} 목록 (총 {len(current_items)}개)"
-            for widget in info_frame.winfo_children():
-                widget.destroy()
-            ttk.Label(info_frame, text=info_text, font=('', 11, 'bold')).pack(anchor='w')
-
-            return current_items
-
-        current_items = refresh_list()
-
-        # 버튼
-        button_frame = ttk.Frame(win)
-        button_frame.pack(fill='x', padx=10, pady=10)
-
-        def load_selected():
-            selection = listbox.curselection()
+        def get_selected_index():
+            selection = tree.selection()
             if not selection:
-                messagebox.showwarning("경고", "항목을 선택해주세요.")
-                return
+                return None
+            try:
+                return int(selection[0])
+            except (TypeError, ValueError):
+                return None
 
-            # 구분선 제외 (홀수 인덱스는 구분선)
-            index = selection[0]
-            if index % 2 == 1:  # 구분선 선택
-                messagebox.showwarning("경고", "항목을 선택해주세요. (구분선이 아닌 항목을 선택하세요)")
-                return
-
-            actual_index = index // 2
-            item = current_items[actual_index]
-
+        def do_load(event=None):
+            idx = get_selected_index()
+            if idx is None:
+                messagebox.showwarning("경고", "항목을 선택해주세요.", parent=win)
+                return "break"
+            items = state['items']
+            if idx < 0 or idx >= len(items):
+                refresh()
+                return "break"
+            item = items[idx]
             if category == 'folder':
                 self.left_folder_var.set(item['left'])
                 self.right_folder_var.set(item['right'])
@@ -1854,38 +2620,132 @@ class CompareToolApp:
             else:  # text
                 self.text_left.delete('1.0', 'end')
                 self.text_right.delete('1.0', 'end')
-                self.text_left.insert('1.0', item['left_text'])
-                self.text_right.insert('1.0', item['right_text'])
+                self.text_left.insert('1.0', item.get('left_text', ''))
+                self.text_right.insert('1.0', item.get('right_text', ''))
 
             win.destroy()
             messagebox.showinfo("완료", "불러오기 완료!")
+            return "break"
 
-        def delete_selected():
-            selection = listbox.curselection()
-            if not selection:
-                messagebox.showwarning("경고", "삭제할 항목을 선택해주세요.")
-                return
+        def do_delete(event=None):
+            idx = get_selected_index()
+            if idx is None:
+                messagebox.showwarning("경고", "삭제할 항목을 선택해주세요.", parent=win)
+                return "break"
+            items = state['items']
+            if idx < 0 or idx >= len(items):
+                refresh()
+                return "break"
+            if not messagebox.askyesno("확인", "선택한 항목을 삭제하시겠습니까?", parent=win):
+                return "break"
+            if data_type == 'history':
+                self.data_manager.delete_history(category, idx)
+            else:
+                self.data_manager.delete_favorite(category, idx)
+            refresh()
+            return "break"
 
-            # 구분선 제외
-            index = selection[0]
-            if index % 2 == 1:  # 구분선 선택
-                messagebox.showwarning("경고", "항목을 선택해주세요. (구분선이 아닌 항목을 선택하세요)")
-                return
+        def do_rename(event=None):
+            if data_type != 'favorite':
+                messagebox.showinfo("알림", "히스토리는 이름을 변경할 수 없습니다.", parent=win)
+                return "break"
+            idx = get_selected_index()
+            if idx is None:
+                messagebox.showwarning("경고", "이름을 변경할 항목을 선택해주세요.", parent=win)
+                return "break"
+            items = state['items']
+            if idx < 0 or idx >= len(items):
+                refresh()
+                return "break"
+            current_name = items[idx].get('name', '')
+            new_name = self._open_rename_dialog(win, current_name)
+            if new_name:
+                self.data_manager.rename_favorite(category, idx, new_name)
+                refresh()
+            return "break"
 
-            actual_index = index // 2
+        def on_escape(event=None):
+            win.destroy()
+            return "break"
 
-            if messagebox.askyesno("확인", "선택한 항목을 삭제하시겠습니까?"):
-                if data_type == 'history':
-                    self.data_manager.delete_history(category, actual_index)
-                else:
-                    self.data_manager.delete_favorite(category, actual_index)
+        # 검색 실시간 필터
+        search_var.trace_add('write', lambda *_: refresh())
 
-                nonlocal current_items
-                current_items = refresh_list()
+        # 키 바인딩
+        def on_tree_return(event=None):
+            if mode == 'select':
+                return do_load()
+            if is_favorite:
+                return do_rename()
+            return "break"
 
-        ttk.Button(button_frame, text="불러오기", command=load_selected).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="삭제", command=delete_selected).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="취소", command=win.destroy).pack(side='left', padx=5)
+        def on_tree_double(event=None):
+            if mode == 'select':
+                return do_load()
+            if is_favorite:
+                return do_rename()
+            return "break"
+
+        tree.bind('<Double-1>', on_tree_double)
+        tree.bind('<Return>', on_tree_return)
+        tree.bind('<Delete>', do_delete)
+        win.bind('<Escape>', on_escape)
+        search_entry.bind('<Return>', on_tree_return)
+        search_entry.bind('<Escape>', on_escape)
+        search_entry.bind('<Down>', lambda e: (tree.focus_set(),
+                                                tree.selection_set(tree.get_children()[:1] or ()),
+                                                "break")[-1])
+
+        # 액션 버튼 구성
+        if mode == 'select':
+            specs = [
+                {'label': '취소', 'command': win.destroy, 'role': 'ghost'},
+                {'label': '삭제', 'icon': '🗑️', 'command': do_delete, 'role': 'destructive'},
+                {'label': '불러오기', 'icon': '▶', 'command': do_load, 'role': 'primary'},
+            ]
+        else:  # manage
+            specs = [
+                {'label': '닫기', 'command': win.destroy, 'role': 'ghost'},
+            ]
+            if is_favorite:
+                specs.append({'label': '이름 변경', 'icon': '✏️',
+                              'command': do_rename, 'role': 'secondary'})
+            specs.append({'label': '삭제', 'icon': '🗑️',
+                          'command': do_delete, 'role': 'destructive'})
+
+        build_button_row(action_frame, specs, align='right', pady=(0, 0))
+
+        # placeholder 초기 표시 (focus_set 전에 — 첫 focus_set이 hide_placeholder 트리거)
+        show_placeholder()
+
+        refresh()
+
+        # 부모 윈도우 기준 중앙 배치
+        win.update_idletasks()
+        try:
+            pw = max(self.root.winfo_width(), 1)
+            ph = max(self.root.winfo_height(), 1)
+            ww = win.winfo_width()
+            wh = win.winfo_height()
+            px = self.root.winfo_rootx() + (pw - ww) // 2
+            py = self.root.winfo_rooty() + (ph - wh) // 2
+            win.geometry(f"+{max(px, 20)}+{max(py, 20)}")
+        except tk.TclError:
+            pass
+
+        win.grab_set()
+        # 첫 포커스는 Treeview의 첫 행으로 — 검색 placeholder가 사라지지 않음
+        first_children = tree.get_children()
+        if first_children:
+            tree.focus_set()
+            tree.selection_set(first_children[0])
+            tree.focus(first_children[0])
+        else:
+            search_entry.focus_set()
+
+    def show_selection_window(self, category, data_type, items):
+        """히스토리/즐겨찾기 선택 다이얼로그 (불러오기용)."""
+        self._build_history_listing_dialog(category, data_type, mode='select')
 
     def add_to_favorite(self, category):
         """즐겨찾기에 추가"""
@@ -1946,121 +2806,8 @@ class CompareToolApp:
         self.show_manager_window(category, 'favorite', items, title)
 
     def show_manager_window(self, category, data_type, items, title):
-        """관리 창 표시"""
-        win = tk.Toplevel(self.root)
-        win.title(title)
-        win.geometry("1000x600")
-
-        # 상단 정보 레이블
-        info_frame = ttk.Frame(win)
-        info_frame.pack(fill='x', padx=10, pady=(10, 5))
-
-        info_text = f"{title} (총 {len(items)}개)"
-        ttk.Label(info_frame, text=info_text, font=('', 12, 'bold')).pack(anchor='w')
-
-        # 리스트박스
-        frame = ttk.Frame(win)
-        frame.pack(fill='both', expand=True, padx=10, pady=5)
-
-        scrollbar = ttk.Scrollbar(frame, orient='vertical')
-        scrollbar.pack(side='right', fill='y')
-
-        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set,
-                            font=(self.font_family, self.font_size), height=20,
-                            selectmode='single', activestyle='dotbox')
-        listbox.pack(fill='both', expand=True)
-        scrollbar.config(command=listbox.yview)
-
-        def refresh_list():
-            listbox.delete(0, 'end')
-            current_items = items if data_type == 'history' else \
-                           (self.data_manager.get_folder_favorites() if category == 'folder' else \
-                            self.data_manager.get_file_favorites() if category == 'file' else \
-                            self.data_manager.get_text_favorites())
-
-            for idx, item in enumerate(current_items):
-                if category == 'folder':
-                    # 폴더 경로만 표시
-                    if data_type == 'favorite':
-                        display = f"⭐ {item['name']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
-                    else:
-                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
-                elif category == 'file':
-                    # 파일 경로 및 이름만 표시
-                    if data_type == 'favorite':
-                        display = f"⭐ {item['name']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
-                    else:
-                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left']}\n   오른쪽: {item['right']}"
-                else:  # text
-                    if data_type == 'favorite':
-                        display = f"⭐ {item['name']}\n   왼쪽: {item['left_preview']}\n   오른쪽: {item['right_preview']}"
-                    else:
-                        display = f"📅 {item['timestamp']}\n   왼쪽: {item['left_preview']}\n   오른쪽: {item['right_preview']}"
-                listbox.insert('end', display)
-                # 구분선 추가
-                if idx < len(current_items) - 1:
-                    listbox.insert('end', '─' * 90)
-
-            # 정보 레이블 업데이트
-            info_text = f"{title} (총 {len(current_items)}개)"
-            for widget in info_frame.winfo_children():
-                widget.destroy()
-            ttk.Label(info_frame, text=info_text, font=('', 12, 'bold')).pack(anchor='w')
-
-        refresh_list()
-
-        # 버튼
-        button_frame = ttk.Frame(win)
-        button_frame.pack(fill='x', padx=10, pady=10)
-
-        def delete_item():
-            selection = listbox.curselection()
-            if not selection:
-                messagebox.showwarning("경고", "삭제할 항목을 선택해주세요.")
-                return
-
-            # 구분선 제외
-            index = selection[0]
-            if index % 2 == 1:  # 구분선 선택
-                messagebox.showwarning("경고", "항목을 선택해주세요. (구분선이 아닌 항목을 선택하세요)")
-                return
-
-            actual_index = index // 2
-
-            if messagebox.askyesno("확인", "선택한 항목을 삭제하시겠습니까?"):
-                if data_type == 'history':
-                    self.data_manager.delete_history(category, actual_index)
-                else:
-                    self.data_manager.delete_favorite(category, actual_index)
-                refresh_list()
-
-        def rename_item():
-            if data_type == 'history':
-                messagebox.showinfo("알림", "히스토리는 이름을 변경할 수 없습니다.")
-                return
-
-            selection = listbox.curselection()
-            if not selection:
-                messagebox.showwarning("경고", "이름을 변경할 항목을 선택해주세요.")
-                return
-
-            # 구분선 제외
-            index = selection[0]
-            if index % 2 == 1:  # 구분선 선택
-                messagebox.showwarning("경고", "항목을 선택해주세요. (구분선이 아닌 항목을 선택하세요)")
-                return
-
-            actual_index = index // 2
-
-            new_name = simpledialog.askstring("이름 변경", "새 이름을 입력하세요:")
-            if new_name:
-                self.data_manager.rename_favorite(category, actual_index, new_name)
-                refresh_list()
-
-        ttk.Button(button_frame, text="삭제", command=delete_item).pack(side='left', padx=5)
-        if data_type == 'favorite':
-            ttk.Button(button_frame, text="이름 변경", command=rename_item).pack(side='left', padx=5)
-        ttk.Button(button_frame, text="닫기", command=win.destroy).pack(side='left', padx=5)
+        """히스토리/즐겨찾기 관리 다이얼로그 (이름변경/삭제)."""
+        self._build_history_listing_dialog(category, data_type, mode='manage')
 
     def show_font_settings(self):
         """폰트 설정 대화상자"""
@@ -2078,8 +2825,11 @@ class CompareToolApp:
         main_frame.pack(fill='both', expand=True)
 
         # 설명
-        ttk.Label(main_frame, text="폴더 목록 및 비교 창의 폰트를 설정합니다.",
-                 font=('', 10)).pack(pady=(0, 20))
+        ttk.Label(
+            main_frame,
+            text="폴더 목록 및 비교 창의 폰트를 설정합니다.",
+            font=(self.font_family, DEFAULT_TEXT_FONT_SIZE)
+        ).pack(pady=(0, 20))
 
         # 폰트 패밀리 선택
         font_family_frame = ttk.Frame(main_frame)
@@ -2090,6 +2840,7 @@ class CompareToolApp:
 
         # 일반적으로 사용 가능한 폰트 목록
         common_fonts = [
+            'Pretendard Std', 'Pretendard', 'Inter',
             'Consolas', 'Courier New', 'Monaco', 'Menlo',
             'DejaVu Sans Mono', 'Liberation Mono', 'Source Code Pro',
             'Arial', 'Helvetica', 'Verdana', 'Tahoma', 'Segoe UI',
@@ -2117,6 +2868,7 @@ class CompareToolApp:
 
         preview_text = tk.Text(preview_frame, height=3, wrap='none')
         preview_text.pack(fill='both', expand=False)
+        configure_notion_text_widget(preview_text, (font_family_var.get(), font_size_var.get()))
         preview_text.insert('1.0', "The quick brown fox jumps over the lazy dog\n빠른 갈색 여우가 게으른 개를 뛰어넘습니다\n0123456789")
 
         def update_preview(*args):
@@ -2141,9 +2893,15 @@ class CompareToolApp:
             messagebox.showinfo("완료", "폰트 설정이 적용되었습니다.")
             win.destroy()
 
-        ttk.Button(button_frame, text="적용", command=apply_settings,
-                  bootstyle='success').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="취소", command=win.destroy).pack(side='left', padx=5)
+        build_button_row(
+            button_frame,
+            [
+                {'label': '취소', 'command': win.destroy, 'role': 'ghost'},
+                {'label': '적용', 'icon': '✓', 'command': apply_settings, 'role': 'primary'},
+            ],
+            align='right',
+            pady=(0, 0),
+        )
 
     def apply_fonts(self):
         """모든 위젯에 폰트 적용"""
@@ -2193,7 +2951,12 @@ class CompareToolApp:
 • # 으로 시작하는 줄은 주석으로 처리됩니다
 • 예시: node_modules/, *.pyc, __pycache__/, .git/, *.log"""
 
-        ttk.Label(info_frame, text=info_text, font=('', 9), justify='left').pack(anchor='w')
+        ttk.Label(
+            info_frame,
+            text=info_text,
+            font=(self.font_family, DEFAULT_TEXT_FONT_SIZE - 2),
+            justify='left'
+        ).pack(anchor='w')
 
         # 텍스트 영역
         text_frame = ttk.Frame(dialog)
@@ -2203,9 +2966,9 @@ class CompareToolApp:
         scrollbar.pack(side='right', fill='y')
 
         text_widget = tk.Text(text_frame, wrap='none', yscrollcommand=scrollbar.set,
-                              font=(self.font_family, self.font_size),
-                              bg='white', fg='#333', relief='solid', borderwidth=1)
+                              font=(self.font_family, self.font_size))
         text_widget.pack(fill='both', expand=True)
+        configure_notion_text_widget(text_widget, (self.font_family, self.font_size))
         scrollbar.config(command=text_widget.yview)
 
         # 기존 패턴 로드
@@ -2250,9 +3013,16 @@ class CompareToolApp:
             if messagebox.askyesno("확인", "모든 제외 패턴을 삭제하시겠습니까?"):
                 text_widget.delete('1.0', 'end')
 
-        ttk.Button(button_frame, text="💾 저장", command=save_patterns, bootstyle='success').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="🗑️ 초기화", command=clear_patterns, bootstyle='warning').pack(side='left', padx=5)
-        ttk.Button(button_frame, text="❌ 취소", command=dialog.destroy).pack(side='left', padx=5)
+        build_button_row(
+            button_frame,
+            [
+                {'label': '취소', 'command': dialog.destroy, 'role': 'ghost'},
+                {'label': '초기화', 'icon': '↻', 'command': clear_patterns, 'role': 'secondary'},
+                {'label': '저장', 'icon': '💾', 'command': save_patterns, 'role': 'primary'},
+            ],
+            align='right',
+            pady=(0, 0),
+        )
 
         # 다이얼로그를 모달로 만들기
         dialog.transient(self.root)
@@ -2260,8 +3030,10 @@ class CompareToolApp:
 
 
 def main():
-    # ttkbootstrap Window with minty theme
+    # ttkbootstrap Window with minty base and Notion visual overrides
     root = ttk.Window(themename="minty")
+    register_pretendard_fonts(root)
+    setup_notion_styles(root)
     app = CompareToolApp(root)
     root.mainloop()
 
