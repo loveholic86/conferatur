@@ -27,6 +27,356 @@ from pathlib import Path
 
 
 PRETENDARD_FONT_DIR = Path(__file__).resolve().parent / 'font' / 'PretendardStd'
+SUPPORTED_LANGUAGES = ('ko', 'en')
+
+UI_STRINGS = {
+    'ko': {
+        'app_title': '파일/폴더 비교 도구',
+        'menu_history': '히스토리',
+        'menu_favorites': '즐겨찾기',
+        'menu_settings': '설정',
+        'menu_language': '언어',
+        'menu_font_settings': '폰트 설정',
+        'menu_folder_history': '폴더 비교 히스토리',
+        'menu_file_history': '파일 비교 히스토리',
+        'menu_text_history': '텍스트 비교 히스토리',
+        'menu_folder_favorite': '폴더 비교 즐겨찾기',
+        'menu_file_favorite': '파일 비교 즐겨찾기',
+        'menu_text_favorite': '텍스트 비교 즐겨찾기',
+        'language_korean': '한국어',
+        'language_english': 'English',
+        'language_changed_title': '완료',
+        'language_changed_message': '언어 설정이 적용되었습니다.',
+        'tab_folder_compare': ' 📁 폴더 비교 ',
+        'tab_text_compare': ' 📝 텍스트 비교 ',
+        'tab_file_compare': ' 📄 파일 비교 ',
+        'history': '히스토리',
+        'load_favorite': '즐겨찾기 불러오기',
+        'add_favorite': '즐겨찾기 추가',
+        'browse': '찾아보기',
+        'reset': '초기화',
+        'exclude_patterns': '제외 패턴',
+        'start_compare': '비교 시작',
+        'compare': '비교하기',
+        'recompare_after_edit': '재비교 (편집 후)',
+        'apply_to_left': '왼쪽으로 적용',
+        'apply_to_right': '오른쪽으로 적용',
+        'copy_left_to_right': '왼쪽 → 오른쪽 복사',
+        'copy_right_to_left': '오른쪽 → 왼쪽 복사',
+        'expand_all': '모두 펼치기',
+        'collapse_all': '모두 접기',
+        'delete_selected': '선택 항목 삭제',
+        'left_block_copy': '왼쪽 블록 복사',
+        'right_block_copy': '오른쪽 블록 복사',
+        'overwrite_left_all': '왼쪽 전체 덮어쓰기',
+        'overwrite_right_all': '오른쪽 전체 덮어쓰기',
+        'save_left_file': '왼쪽 파일 저장',
+        'save_right_file': '오른쪽 파일 저장',
+        'prev_diff': '이전 diff',
+        'next_diff': '다음 diff',
+        'cancel': '취소',
+        'ok': '확인',
+        'apply': '적용',
+        'save': '저장',
+        'close': '닫기',
+        'load': '불러오기',
+        'rename': '이름 변경',
+        'left_folder': '왼쪽 폴더:',
+        'right_folder': '오른쪽 폴더:',
+        'left_file': '왼쪽 파일:',
+        'right_file': '오른쪽 파일:',
+        'method_md5': 'MD5 비교',
+        'method_date': '날짜 비교',
+        'method_both': 'MD5 + 날짜',
+        'file_path': '파일 경로',
+        'status': '상태',
+        'left_size': '왼쪽 크기',
+        'right_size': '오른쪽 크기',
+        'left_modified': '왼쪽 수정일',
+        'right_modified': '오른쪽 수정일',
+        'preview_select_file': '파일 내용 미리보기 (파일을 선택하세요)',
+        'left_file_label': '왼쪽 파일',
+        'right_file_label': '오른쪽 파일',
+        'left_text': '왼쪽 텍스트',
+        'right_text': '오른쪽 텍스트',
+        'left_file_content_editable': '왼쪽 파일 내용 (편집 가능)',
+        'right_file_content_editable': '오른쪽 파일 내용 (편집 가능)',
+        'copy': '복사',
+        'cut': '잘라내기',
+        'paste': '붙여넣기',
+        'select_all': '전체 선택',
+        'copy_current_block_to_left': '◀ 왼쪽으로 복사 (현재 블록)',
+        'copy_current_block_to_right': '오른쪽으로 복사 ▶ (현재 블록)',
+        'status_content_diff_md5': '내용 다름 (MD5)',
+        'status_left_only': '왼쪽만 존재',
+        'status_right_only': '오른쪽만 존재',
+        'status_left_newer': '왼쪽이 최신',
+        'status_right_newer': '오른쪽이 최신',
+        'status_same_content_left_newer': '내용 같음, 왼쪽이 최신',
+        'status_same_content_right_newer': '내용 같음, 오른쪽이 최신',
+        'status_same': '동일',
+        'title_warning': '경고',
+        'title_error': '오류',
+        'title_done': '완료',
+        'title_confirm': '확인',
+        'title_notice': '알림',
+        'title_success': '성공',
+        'select_both_folders': '두 폴더를 모두 선택해주세요.',
+        'selected_folder_missing': '선택한 폴더가 존재하지 않습니다.',
+        'folder_compare_done': '비교가 완료되었습니다.\n차이가 있는 파일: {count}개',
+        'excluded_files_count': '제외된 파일: {count}개',
+        'select_file_or_folder_to_copy': '복사할 파일 또는 폴더를 선택해주세요.',
+        'no_files_to_copy': '복사할 파일이 없습니다.',
+        'copy_confirm': '{count}개의 파일을 {direction} 복사하시겠습니까?',
+        'direction_left_to_right': '왼쪽에서 오른쪽으로',
+        'direction_right_to_left': '오른쪽에서 왼쪽으로',
+        'copied_files_result': '{count}개 파일이 복사되었습니다.',
+        'copy_failed_count': '{count}개 파일 복사 실패.',
+        'failed_files': '실패한 파일:',
+        'failed_files_more': '... 외 {count}개',
+        'select_files_to_delete': '삭제할 파일을 선택해주세요.',
+        'select_files_to_delete_no_folder': '삭제할 파일을 선택해주세요. (폴더는 선택할 수 없습니다)',
+        'delete_files_confirm': '{count}개 파일을 삭제하시겠습니까?',
+        'delete_failed': '파일 삭제 실패: {path}\n{error}',
+        'deleted_files_result': '{count}개 파일이 삭제되었습니다.',
+        'file_unreadable_marker': '[파일을 읽을 수 없습니다]',
+        'file_missing_marker': '[파일이 존재하지 않습니다]',
+        'text_compare_done': '텍스트 비교가 완료되었습니다.\n차이나는 부분이 연한 붉은색으로 표시됩니다.',
+        'text_applied': '텍스트가 적용되었습니다.',
+        'select_both_files': '두 파일을 모두 선택해주세요.',
+        'selected_file_missing': '선택한 파일이 존재하지 않습니다.',
+        'file_compare_done': '파일 비교가 완료되었습니다.\n차이나는 부분이 연한 붉은색으로 표시됩니다.',
+        'file_read_failed': '파일을 읽을 수 없습니다:\n{error}',
+        'select_file_to_save': '저장할 파일을 선택해주세요.',
+        'file_saved': '파일이 저장되었습니다.',
+        'file_save_failed': '파일 저장 실패:\n{error}',
+        'cursor_not_on_diff': '커서가 차이점 블록 위에 있지 않습니다.',
+        'overwrite_right_confirm': '오른쪽 파일 내용을 왼쪽 파일 내용으로 완전히 덮어쓰시겠습니까?\n이 작업은 저장 전까지 취소할 수 있습니다.',
+        'overwrite_left_confirm': '왼쪽 파일 내용을 오른쪽 파일 내용으로 완전히 덮어쓰시겠습니까?\n이 작업은 저장 전까지 취소할 수 있습니다.',
+        'copied_left_to_right_all': '왼쪽 파일 내용으로 오른쪽 파일을 덮어썼습니다.',
+        'copied_right_to_left_all': '오른쪽 파일 내용으로 왼쪽 파일을 덮어썼습니다.',
+        'history_empty': '히스토리가 비어있습니다.',
+        'favorites_empty': '즐겨찾기가 비어있습니다.',
+        'load_complete': '불러오기 완료!',
+        'favorite_add_title': '즐겨찾기 추가',
+        'favorite_add_prompt': '즐겨찾기 이름을 입력하세요:',
+        'select_folder_warning': '폴더를 선택해주세요.',
+        'select_file_warning': '파일을 선택해주세요.',
+        'enter_text_warning': '텍스트를 입력해주세요.',
+        'favorite_added': '즐겨찾기에 추가되었습니다.',
+        'folder_compare_category': '폴더 비교',
+        'file_compare_category': '파일 비교',
+        'text_compare_category': '텍스트 비교',
+        'favorites_kind': '즐겨찾기',
+        'history_kind': '히스토리',
+        'rename_title': '이름 변경',
+        'enter_new_name': '새 이름을 입력하세요',
+        'name_header': '이름',
+        'timestamp_header': '시각',
+        'left_folder_heading': '왼쪽 폴더',
+        'right_folder_heading': '오른쪽 폴더',
+        'compare_method_heading': '비교 방법',
+        'left_file_heading': '왼쪽 파일',
+        'right_file_heading': '오른쪽 파일',
+        'left_preview_heading': '왼쪽 미리보기',
+        'right_preview_heading': '오른쪽 미리보기',
+        'search_placeholder': '검색...',
+        'total_count': '총 {total}개',
+        'total_search_count': '총 {total}개 · 검색 결과 {visible}개',
+        'no_items_empty': '아직 항목이 없습니다.\n비교를 실행하거나 즐겨찾기를 추가해 보세요.',
+        'no_search_results': '검색 결과가 없습니다.\n다른 키워드로 시도해 보세요.',
+        'select_item_warning': '항목을 선택해주세요.',
+        'select_item_to_delete_warning': '삭제할 항목을 선택해주세요.',
+        'delete_selected_confirm': '선택한 항목을 삭제하시겠습니까?',
+        'history_cannot_rename': '히스토리는 이름을 변경할 수 없습니다.',
+        'select_item_to_rename_warning': '이름을 변경할 항목을 선택해주세요.',
+        'font_settings': '폰트 설정',
+        'font_settings_desc': '폴더 목록 및 비교 창의 폰트를 설정합니다.',
+        'font': '폰트:',
+        'size': '크기:',
+        'preview': '미리보기',
+        'font_preview_text': 'The quick brown fox jumps over the lazy dog\n빠른 갈색 여우가 게으른 개를 뛰어넘습니다\n0123456789',
+        'font_settings_applied': '폰트 설정이 적용되었습니다.',
+        'exclude_patterns_title': '폴더 비교 제외 패턴 설정',
+        'exclude_patterns_info': '제외할 파일이나 폴더 패턴을 입력하세요 (.gitignore 형식)\n• 한 줄에 하나의 패턴을 입력합니다\n• # 으로 시작하는 줄은 주석으로 처리됩니다\n• 예시: node_modules/, *.pyc, __pycache__/, .git/, *.log',
+        'exclude_default_examples': '# 일반적으로 제외되는 폴더/파일 예시\n# node_modules/\n# .git/\n# __pycache__/\n# *.pyc\n# .DS_Store\n# Thumbs.db',
+        'pattern_saved': '{count}개의 제외 패턴이 저장되었습니다.',
+        'clear_patterns_confirm': '모든 제외 패턴을 삭제하시겠습니까?',
+    },
+    'en': {
+        'app_title': 'File/Folder Compare Tool',
+        'menu_history': 'History',
+        'menu_favorites': 'Favorites',
+        'menu_settings': 'Settings',
+        'menu_language': 'Language',
+        'menu_font_settings': 'Font Settings',
+        'menu_folder_history': 'Folder Compare History',
+        'menu_file_history': 'File Compare History',
+        'menu_text_history': 'Text Compare History',
+        'menu_folder_favorite': 'Folder Compare Favorites',
+        'menu_file_favorite': 'File Compare Favorites',
+        'menu_text_favorite': 'Text Compare Favorites',
+        'language_korean': 'Korean',
+        'language_english': 'English',
+        'language_changed_title': 'Done',
+        'language_changed_message': 'Language setting has been applied.',
+        'tab_folder_compare': ' 📁 Folder Compare ',
+        'tab_text_compare': ' 📝 Text Compare ',
+        'tab_file_compare': ' 📄 File Compare ',
+        'history': 'History',
+        'load_favorite': 'Load Favorite',
+        'add_favorite': 'Add Favorite',
+        'browse': 'Browse',
+        'reset': 'Reset',
+        'exclude_patterns': 'Exclude Patterns',
+        'start_compare': 'Start Compare',
+        'compare': 'Compare',
+        'recompare_after_edit': 'Recompare (After Edit)',
+        'apply_to_left': 'Apply to Left',
+        'apply_to_right': 'Apply to Right',
+        'copy_left_to_right': 'Copy Left → Right',
+        'copy_right_to_left': 'Copy Right → Left',
+        'expand_all': 'Expand All',
+        'collapse_all': 'Collapse All',
+        'delete_selected': 'Delete Selected',
+        'left_block_copy': 'Copy Left Block',
+        'right_block_copy': 'Copy Right Block',
+        'overwrite_left_all': 'Overwrite Left All',
+        'overwrite_right_all': 'Overwrite Right All',
+        'save_left_file': 'Save Left File',
+        'save_right_file': 'Save Right File',
+        'prev_diff': 'Prev Diff',
+        'next_diff': 'Next Diff',
+        'cancel': 'Cancel',
+        'ok': 'OK',
+        'apply': 'Apply',
+        'save': 'Save',
+        'close': 'Close',
+        'load': 'Load',
+        'rename': 'Rename',
+        'left_folder': 'Left Folder:',
+        'right_folder': 'Right Folder:',
+        'left_file': 'Left File:',
+        'right_file': 'Right File:',
+        'method_md5': 'MD5 Compare',
+        'method_date': 'Date Compare',
+        'method_both': 'MD5 + Date',
+        'file_path': 'File Path',
+        'status': 'Status',
+        'left_size': 'Left Size',
+        'right_size': 'Right Size',
+        'left_modified': 'Left Modified',
+        'right_modified': 'Right Modified',
+        'preview_select_file': 'File Preview (select a file)',
+        'left_file_label': 'Left File',
+        'right_file_label': 'Right File',
+        'left_text': 'Left Text',
+        'right_text': 'Right Text',
+        'left_file_content_editable': 'Left File Content (Editable)',
+        'right_file_content_editable': 'Right File Content (Editable)',
+        'copy': 'Copy',
+        'cut': 'Cut',
+        'paste': 'Paste',
+        'select_all': 'Select All',
+        'copy_current_block_to_left': '◀ Copy to Left (Current Block)',
+        'copy_current_block_to_right': 'Copy to Right ▶ (Current Block)',
+        'status_content_diff_md5': 'Content differs (MD5)',
+        'status_left_only': 'Left only',
+        'status_right_only': 'Right only',
+        'status_left_newer': 'Left is newer',
+        'status_right_newer': 'Right is newer',
+        'status_same_content_left_newer': 'Same content, left is newer',
+        'status_same_content_right_newer': 'Same content, right is newer',
+        'status_same': 'Same',
+        'title_warning': 'Warning',
+        'title_error': 'Error',
+        'title_done': 'Done',
+        'title_confirm': 'Confirm',
+        'title_notice': 'Notice',
+        'title_success': 'Success',
+        'select_both_folders': 'Please select both folders.',
+        'selected_folder_missing': 'The selected folder does not exist.',
+        'folder_compare_done': 'Compare complete.\nFiles with differences: {count}',
+        'excluded_files_count': 'Excluded files: {count}',
+        'select_file_or_folder_to_copy': 'Please select a file or folder to copy.',
+        'no_files_to_copy': 'There are no files to copy.',
+        'copy_confirm': 'Copy {count} files {direction}?',
+        'direction_left_to_right': 'from left to right',
+        'direction_right_to_left': 'from right to left',
+        'copied_files_result': '{count} files copied.',
+        'copy_failed_count': '{count} file copy failures.',
+        'failed_files': 'Failed files:',
+        'failed_files_more': '... and {count} more',
+        'select_files_to_delete': 'Please select files to delete.',
+        'select_files_to_delete_no_folder': 'Please select files to delete. (Folders cannot be selected)',
+        'delete_files_confirm': 'Delete {count} files?',
+        'delete_failed': 'Failed to delete file: {path}\n{error}',
+        'deleted_files_result': '{count} files deleted.',
+        'file_unreadable_marker': '[Unable to read file]',
+        'file_missing_marker': '[File does not exist]',
+        'text_compare_done': 'Text compare complete.\nDifferences are highlighted in light red.',
+        'text_applied': 'Text has been applied.',
+        'select_both_files': 'Please select both files.',
+        'selected_file_missing': 'The selected file does not exist.',
+        'file_compare_done': 'File compare complete.\nDifferences are highlighted in light red.',
+        'file_read_failed': 'Unable to read file:\n{error}',
+        'select_file_to_save': 'Please select a file to save.',
+        'file_saved': 'File has been saved.',
+        'file_save_failed': 'Failed to save file:\n{error}',
+        'cursor_not_on_diff': 'The cursor is not on a diff block.',
+        'overwrite_right_confirm': 'Overwrite the entire right file content with the left file content?\nYou can undo this until you save.',
+        'overwrite_left_confirm': 'Overwrite the entire left file content with the right file content?\nYou can undo this until you save.',
+        'copied_left_to_right_all': 'Right file content was overwritten with the left file content.',
+        'copied_right_to_left_all': 'Left file content was overwritten with the right file content.',
+        'history_empty': 'History is empty.',
+        'favorites_empty': 'Favorites are empty.',
+        'load_complete': 'Loaded!',
+        'favorite_add_title': 'Add Favorite',
+        'favorite_add_prompt': 'Enter a favorite name:',
+        'select_folder_warning': 'Please select folders.',
+        'select_file_warning': 'Please select files.',
+        'enter_text_warning': 'Please enter text.',
+        'favorite_added': 'Added to favorites.',
+        'folder_compare_category': 'Folder Compare',
+        'file_compare_category': 'File Compare',
+        'text_compare_category': 'Text Compare',
+        'favorites_kind': 'Favorites',
+        'history_kind': 'History',
+        'rename_title': 'Rename',
+        'enter_new_name': 'Enter a new name',
+        'name_header': 'Name',
+        'timestamp_header': 'Time',
+        'left_folder_heading': 'Left Folder',
+        'right_folder_heading': 'Right Folder',
+        'compare_method_heading': 'Compare Method',
+        'left_file_heading': 'Left File',
+        'right_file_heading': 'Right File',
+        'left_preview_heading': 'Left Preview',
+        'right_preview_heading': 'Right Preview',
+        'search_placeholder': 'Search...',
+        'total_count': 'Total {total}',
+        'total_search_count': 'Total {total} · Search results {visible}',
+        'no_items_empty': 'No items yet.\nRun a comparison or add a favorite.',
+        'no_search_results': 'No search results.\nTry another keyword.',
+        'select_item_warning': 'Please select an item.',
+        'select_item_to_delete_warning': 'Please select an item to delete.',
+        'delete_selected_confirm': 'Delete the selected item?',
+        'history_cannot_rename': 'History items cannot be renamed.',
+        'select_item_to_rename_warning': 'Please select an item to rename.',
+        'font_settings': 'Font Settings',
+        'font_settings_desc': 'Set fonts for the folder list and comparison views.',
+        'font': 'Font:',
+        'size': 'Size:',
+        'preview': 'Preview',
+        'font_preview_text': 'The quick brown fox jumps over the lazy dog\nPack my box with five dozen liquor jugs\n0123456789',
+        'font_settings_applied': 'Font settings have been applied.',
+        'exclude_patterns_title': 'Folder Compare Exclude Patterns',
+        'exclude_patterns_info': 'Enter file or folder patterns to exclude (.gitignore format)\n• Enter one pattern per line\n• Lines starting with # are treated as comments\n• Examples: node_modules/, *.pyc, __pycache__/, .git/, *.log',
+        'exclude_default_examples': '# Commonly excluded folder/file examples\n# node_modules/\n# .git/\n# __pycache__/\n# *.pyc\n# .DS_Store\n# Thumbs.db',
+        'pattern_saved': '{count} exclude patterns saved.',
+        'clear_patterns_confirm': 'Clear all exclude patterns?',
+    },
+}
 
 
 def register_pretendard_fonts(root=None):
@@ -493,21 +843,21 @@ def build_toolbar(parent, left_specs=None, right_specs=None, pady=(8, 8)):
 def build_history_favorite_row(parent, app, category):
     specs = [
         {
-            'label': '히스토리',
+            'label': app.t('history'),
             'icon': '📜',
             'command': lambda: app.load_from_history(category),
             'role': 'ghost',
             'compact': True,
         },
         {
-            'label': '즐겨찾기 불러오기',
+            'label': app.t('load_favorite'),
             'icon': '⭐',
             'command': lambda: app.load_from_favorite(category),
             'role': 'ghost',
             'compact': True,
         },
         {
-            'label': '즐겨찾기 추가',
+            'label': app.t('add_favorite'),
             'icon': '＋',
             'command': lambda: app.add_to_favorite(category),
             'role': 'ghost',
@@ -598,6 +948,7 @@ class DataManager:
             'file_favorites': [],
             'font_family': 'Pretendard Std',  # 기본 폰트 (PretendardStd OTF 번들)
             'font_size': DEFAULT_TEXT_FONT_SIZE,  # 신규 사용자 기본 폰트 크기
+            'language': 'ko',
             'exclude_patterns': []       # 폴더 비교 제외 패턴
         }
 
@@ -753,6 +1104,18 @@ class DataManager:
         self.data['font_size'] = size
         self.save()
 
+    def get_language(self):
+        """UI 언어 설정 가져오기"""
+        language = self.data.get('language', 'ko')
+        return language if language in SUPPORTED_LANGUAGES else 'ko'
+
+    def set_language(self, language):
+        """UI 언어 설정 저장"""
+        if language not in SUPPORTED_LANGUAGES:
+            language = 'ko'
+        self.data['language'] = language
+        self.save()
+
     def get_exclude_patterns(self):
         """제외 패턴 가져오기"""
         return self.data.get('exclude_patterns', [])
@@ -774,14 +1137,19 @@ class CompareToolApp:
         self.is_windows = (self.system == 'Windows')
         self.is_linux = (self.system == 'Linux')
 
+        # 데이터 매니저 초기화
+        self.data_manager = DataManager()
+        self.language = self.data_manager.get_language()
+
         # OS별 타이틀 설정
         os_name = "macOS" if self.is_macos else ("Windows" if self.is_windows else "Linux")
-        self.root.title(f"📂 파일/폴더 비교 도구 [{os_name}]")
+        self.os_name = os_name
+        self._update_window_title()
         self.root.geometry("1300x850")
         self.root.minsize(1280, 800)
 
         # OS 정보 출력
-        print(f"=== 파일/폴더 비교 도구 시작 ===")
+        print(f"=== {self.t('app_title')} 시작 ===")
         print(f"테마: minty + Notion overrides (ttkbootstrap)")
         print(f"운영체제: {self.system} ({os_name})")
         if self.is_macos:
@@ -790,9 +1158,6 @@ class CompareToolApp:
             print(f"키보드 단축키: Ctrl+C (복사), Ctrl+V (붙여넣기), Ctrl+X (잘라내기), Ctrl+A (전체선택)")
         print(f"우클릭: 컨텍스트 메뉴")
         print()
-
-        # 데이터 매니저 초기화
-        self.data_manager = DataManager()
 
         # 폰트 설정 로드
         font_settings = self.data_manager.get_font_settings()
@@ -806,11 +1171,116 @@ class CompareToolApp:
         self._folder_sort_state = {'col': None, 'reverse': False}
         self._folder_tree_heading_labels = {}
 
-        # 메뉴바 생성
         self.create_menubar()
+        self.create_tabs()
 
-        # 탭 생성
-        self.notebook = ttk.Notebook(root)
+    def t(self, key, **kwargs):
+        """현재 UI 언어에 맞는 표시 문자열을 반환."""
+        language = getattr(self, 'language', 'ko')
+        template = UI_STRINGS.get(language, UI_STRINGS['ko']).get(
+            key,
+            UI_STRINGS['ko'].get(key, key)
+        )
+        if kwargs:
+            try:
+                return template.format(**kwargs)
+            except (KeyError, ValueError):
+                return template
+        return template
+
+    def _update_window_title(self):
+        self.root.title(f"📂 {self.t('app_title')} [{self.os_name}]")
+
+    def _method_label(self, method):
+        return {
+            'md5': self.t('method_md5'),
+            'date': self.t('method_date'),
+            'both': self.t('method_both'),
+        }.get(method, method)
+
+    def _folder_status_label(self, status):
+        return {
+            '내용 다름 (MD5)': self.t('status_content_diff_md5'),
+            '왼쪽만 존재': self.t('status_left_only'),
+            '오른쪽만 존재': self.t('status_right_only'),
+            '왼쪽이 최신': self.t('status_left_newer'),
+            '오른쪽이 최신': self.t('status_right_newer'),
+            '내용 같음, 왼쪽이 최신': self.t('status_same_content_left_newer'),
+            '내용 같음, 오른쪽이 최신': self.t('status_same_content_right_newer'),
+            '동일': self.t('status_same'),
+        }.get(status, status)
+
+    def _snapshot_ui_state(self):
+        state = {}
+        for attr in (
+            'left_folder_var', 'right_folder_var',
+            'file_left_var', 'file_right_var',
+            'compare_method_var',
+        ):
+            if hasattr(self, attr):
+                state[attr] = getattr(self, attr).get()
+
+        text_widgets = (
+            ('text_left', 'text_left_content'),
+            ('text_right', 'text_right_content'),
+            ('file_text_left', 'file_text_left_content'),
+            ('file_text_right', 'file_text_right_content'),
+        )
+        for attr, key in text_widgets:
+            if hasattr(self, attr):
+                try:
+                    state[key] = getattr(self, attr).get('1.0', 'end-1c')
+                except tk.TclError:
+                    pass
+        return state
+
+    def _restore_ui_state(self, state):
+        for attr in (
+            'left_folder_var', 'right_folder_var',
+            'file_left_var', 'file_right_var',
+            'compare_method_var',
+        ):
+            if attr in state and hasattr(self, attr):
+                getattr(self, attr).set(state[attr])
+
+        text_widgets = (
+            ('text_left', 'text_left_content'),
+            ('text_right', 'text_right_content'),
+            ('file_text_left', 'file_text_left_content'),
+            ('file_text_right', 'file_text_right_content'),
+        )
+        for attr, key in text_widgets:
+            if key in state and hasattr(self, attr):
+                widget = getattr(self, attr)
+                try:
+                    widget.delete('1.0', 'end')
+                    widget.insert('1.0', state[key])
+                except tk.TclError:
+                    pass
+
+    def rebuild_ui(self, preserve_state=True):
+        state = self._snapshot_ui_state() if preserve_state else {}
+        if hasattr(self, 'notebook'):
+            self.notebook.destroy()
+        self.create_menubar()
+        self.create_tabs()
+        self._restore_ui_state(state)
+
+    def set_language(self, language):
+        if language not in SUPPORTED_LANGUAGES or language == self.language:
+            return
+        self.language = language
+        self.data_manager.set_language(language)
+        self._update_window_title()
+        self.rebuild_ui(preserve_state=True)
+        messagebox.showinfo(
+            self.t('language_changed_title'),
+            self.t('language_changed_message')
+        )
+
+    def create_tabs(self):
+        """탭 생성"""
+        self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill='both', expand=True, padx=10, pady=10)
 
         # 세 가지 모드 탭 생성
@@ -818,9 +1288,9 @@ class CompareToolApp:
         self.text_compare_tab = ttk.Frame(self.notebook)
         self.file_compare_tab = ttk.Frame(self.notebook)
 
-        self.notebook.add(self.folder_compare_tab, text=" 📁 폴더 비교 ")
-        self.notebook.add(self.text_compare_tab, text=" 📝 텍스트 비교 ")
-        self.notebook.add(self.file_compare_tab, text=" 📄 파일 비교 ")
+        self.notebook.add(self.folder_compare_tab, text=self.t('tab_folder_compare'))
+        self.notebook.add(self.text_compare_tab, text=self.t('tab_text_compare'))
+        self.notebook.add(self.file_compare_tab, text=self.t('tab_file_compare'))
 
         # 각 탭 초기화
         self.setup_folder_compare_tab()
@@ -835,22 +1305,39 @@ class CompareToolApp:
 
         # 히스토리 메뉴
         history_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="히스토리", menu=history_menu)
-        history_menu.add_command(label="폴더 비교 히스토리", command=lambda: self.show_history_manager('folder'))
-        history_menu.add_command(label="파일 비교 히스토리", command=lambda: self.show_history_manager('file'))
-        history_menu.add_command(label="텍스트 비교 히스토리", command=lambda: self.show_history_manager('text'))
+        menubar.add_cascade(label=self.t('menu_history'), menu=history_menu)
+        history_menu.add_command(label=self.t('menu_folder_history'), command=lambda: self.show_history_manager('folder'))
+        history_menu.add_command(label=self.t('menu_file_history'), command=lambda: self.show_history_manager('file'))
+        history_menu.add_command(label=self.t('menu_text_history'), command=lambda: self.show_history_manager('text'))
 
         # 즐겨찾기 메뉴
         favorite_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="즐겨찾기", menu=favorite_menu)
-        favorite_menu.add_command(label="폴더 비교 즐겨찾기", command=lambda: self.show_favorite_manager('folder'))
-        favorite_menu.add_command(label="파일 비교 즐겨찾기", command=lambda: self.show_favorite_manager('file'))
-        favorite_menu.add_command(label="텍스트 비교 즐겨찾기", command=lambda: self.show_favorite_manager('text'))
+        menubar.add_cascade(label=self.t('menu_favorites'), menu=favorite_menu)
+        favorite_menu.add_command(label=self.t('menu_folder_favorite'), command=lambda: self.show_favorite_manager('folder'))
+        favorite_menu.add_command(label=self.t('menu_file_favorite'), command=lambda: self.show_favorite_manager('file'))
+        favorite_menu.add_command(label=self.t('menu_text_favorite'), command=lambda: self.show_favorite_manager('text'))
 
         # 설정 메뉴
         settings_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="설정", menu=settings_menu)
-        settings_menu.add_command(label="폰트 설정", command=self.show_font_settings)
+        menubar.add_cascade(label=self.t('menu_settings'), menu=settings_menu)
+        settings_menu.add_command(label=self.t('menu_font_settings'), command=self.show_font_settings)
+        settings_menu.add_separator()
+
+        language_menu = tk.Menu(settings_menu, tearoff=0)
+        self.language_var = tk.StringVar(value=self.language)
+        settings_menu.add_cascade(label=self.t('menu_language'), menu=language_menu)
+        language_menu.add_radiobutton(
+            label=self.t('language_korean'),
+            variable=self.language_var,
+            value='ko',
+            command=lambda: self.set_language('ko'),
+        )
+        language_menu.add_radiobutton(
+            label=self.t('language_english'),
+            variable=self.language_var,
+            value='en',
+            command=lambda: self.set_language('en'),
+        )
 
     def setup_folder_compare_tab(self):
         """첫 번째 모드: 폴더 비교"""
@@ -866,20 +1353,20 @@ class CompareToolApp:
         build_history_favorite_row(history_fav_frame, self, 'folder')
 
         # 왼쪽 폴더 선택
-        ttk.Label(control_frame, text="왼쪽 폴더:").grid(row=1, column=0, sticky='w', padx=(0, 8), pady=5)
+        ttk.Label(control_frame, text=self.t('left_folder')).grid(row=1, column=0, sticky='w', padx=(0, 8), pady=5)
         self.left_folder_var = tk.StringVar()
         self.left_folder_entry = ttk.Entry(control_frame, textvariable=self.left_folder_var)
         self.left_folder_entry.grid(row=1, column=1, sticky='ew', padx=(0, 8), pady=5)
-        create_action_button(control_frame, "찾아보기",
+        create_action_button(control_frame, self.t('browse'),
                              command=lambda: self.browse_folder(self.left_folder_var, self.left_folder_entry),
                              role='secondary', icon='📁').grid(row=1, column=2, padx=0, pady=5)
 
         # 오른쪽 폴더 선택
-        ttk.Label(control_frame, text="오른쪽 폴더:").grid(row=2, column=0, sticky='w', padx=(0, 8), pady=5)
+        ttk.Label(control_frame, text=self.t('right_folder')).grid(row=2, column=0, sticky='w', padx=(0, 8), pady=5)
         self.right_folder_var = tk.StringVar()
         self.right_folder_entry = ttk.Entry(control_frame, textvariable=self.right_folder_var)
         self.right_folder_entry.grid(row=2, column=1, sticky='ew', padx=(0, 8), pady=5)
-        create_action_button(control_frame, "찾아보기",
+        create_action_button(control_frame, self.t('browse'),
                              command=lambda: self.browse_folder(self.right_folder_var, self.right_folder_entry),
                              role='secondary', icon='📁').grid(row=2, column=2, padx=0, pady=5)
 
@@ -893,39 +1380,42 @@ class CompareToolApp:
         self.compare_method_var = tk.StringVar(value="md5")
         method_frame = ttk.Frame(option_frame)
         method_frame.pack(side='left', fill='x', expand=True)
-        ttk.Radiobutton(method_frame, text="🔍 MD5 비교", variable=self.compare_method_var, value="md5").pack(side='left', padx=(0, 12))
-        ttk.Radiobutton(method_frame, text="📅 날짜 비교", variable=self.compare_method_var, value="date").pack(side='left', padx=(0, 12))
-        ttk.Radiobutton(method_frame, text="🔍📅 MD5 + 날짜", variable=self.compare_method_var, value="both").pack(side='left')
+        ttk.Radiobutton(method_frame, text=f"🔍 {self.t('method_md5')}", variable=self.compare_method_var, value="md5").pack(side='left', padx=(0, 12))
+        ttk.Radiobutton(method_frame, text=f"📅 {self.t('method_date')}", variable=self.compare_method_var, value="date").pack(side='left', padx=(0, 12))
+        ttk.Radiobutton(method_frame, text=f"🔍📅 {self.t('method_both')}", variable=self.compare_method_var, value="both").pack(side='left')
 
         action_frame = ttk.Frame(option_frame)
         action_frame.pack(side='right')
         build_button_row(action_frame, [
-            {'label': '초기화', 'icon': '↻', 'command': self.clear_folder_comparison, 'role': 'ghost'},
-            {'label': '제외 패턴', 'icon': '⚙️', 'command': self.open_exclude_patterns_dialog, 'role': 'secondary'},
-            {'label': '비교 시작', 'icon': '▶', 'command': self.compare_folders, 'role': 'primary'},
+            {'label': self.t('reset'), 'icon': '↻', 'command': self.clear_folder_comparison, 'role': 'ghost'},
+            {'label': self.t('exclude_patterns'), 'icon': '⚙️', 'command': self.open_exclude_patterns_dialog, 'role': 'secondary'},
+            {'label': self.t('start_compare'), 'icon': '▶', 'command': self.compare_folders, 'role': 'primary'},
         ], align='right', pady=(0, 0))
 
         # 결과 영역
         result_frame = ttk.Frame(frame)
         result_frame.pack(fill='both', expand=True, padx=SECTION_PADDING, pady=(0, SECTION_PADDING))
+        result_frame.columnconfigure(0, weight=1)
+        result_frame.rowconfigure(0, weight=2)
+        result_frame.rowconfigure(2, weight=3)
 
         # 트리뷰 생성
         tree_frame = ttk.Frame(result_frame)
-        tree_frame.pack(fill='both', expand=True)
+        tree_frame.grid(row=0, column=0, sticky='nsew')
 
         build_toolbar(tree_frame,
                       left_specs=[
-                          {'label': '왼쪽 → 오른쪽 복사', 'icon': '📤',
+                          {'label': self.t('copy_left_to_right'), 'icon': '📤',
                            'command': lambda: self.copy_file('left_to_right'), 'role': 'secondary'},
-                          {'label': '오른쪽 → 왼쪽 복사', 'icon': '📥',
+                          {'label': self.t('copy_right_to_left'), 'icon': '📥',
                            'command': lambda: self.copy_file('right_to_left'), 'role': 'secondary'},
-                          {'label': '모두 펼치기', 'icon': '⊞',
+                          {'label': self.t('expand_all'), 'icon': '⊞',
                            'command': self.expand_all_folder_tree, 'role': 'ghost'},
-                          {'label': '모두 접기', 'icon': '⊟',
+                          {'label': self.t('collapse_all'), 'icon': '⊟',
                            'command': self.collapse_all_folder_tree, 'role': 'ghost'},
                       ],
                       right_specs=[
-                          {'label': '선택 항목 삭제', 'icon': '🗑️',
+                          {'label': self.t('delete_selected'), 'icon': '🗑️',
                            'command': self.delete_selected, 'role': 'destructive'},
                       ],
                       pady=(0, 8))
@@ -950,12 +1440,12 @@ class CompareToolApp:
 
         # 트리뷰 열 설정
         self._folder_tree_heading_labels = {
-            '#0': '파일 경로',
-            '상태': '상태',
-            '왼쪽_크기': '왼쪽 크기',
-            '오른쪽_크기': '오른쪽 크기',
-            '왼쪽_수정일': '왼쪽 수정일',
-            '오른쪽_수정일': '오른쪽 수정일',
+            '#0': self.t('file_path'),
+            '상태': self.t('status'),
+            '왼쪽_크기': self.t('left_size'),
+            '오른쪽_크기': self.t('right_size'),
+            '왼쪽_수정일': self.t('left_modified'),
+            '오른쪽_수정일': self.t('right_modified'),
         }
         self._update_folder_tree_headings()
 
@@ -972,16 +1462,16 @@ class CompareToolApp:
         # 컨텍스트 메뉴 생성 (루트 윈도우에 연결)
         self.folder_tree_context_menu = tk.Menu(self.root, tearoff=0)
         self.folder_tree_context_menu.add_command(
-            label="📤 왼쪽 → 오른쪽 복사",
+            label=build_button_text(self.t('copy_left_to_right'), '📤'),
             command=lambda: self.copy_file('left_to_right')
         )
         self.folder_tree_context_menu.add_command(
-            label="📥 오른쪽 → 왼쪽 복사",
+            label=build_button_text(self.t('copy_right_to_left'), '📥'),
             command=lambda: self.copy_file('right_to_left')
         )
         self.folder_tree_context_menu.add_separator()
         self.folder_tree_context_menu.add_command(
-            label="🗑️ 선택 항목 삭제",
+            label=build_button_text(self.t('delete_selected'), '🗑️'),
             command=self.delete_selected
         )
 
@@ -994,23 +1484,23 @@ class CompareToolApp:
         # 파일 내용 미리보기 영역
         preview_label = ttk.Label(
             result_frame,
-            text="파일 내용 미리보기 (파일을 선택하세요)",
+            text=self.t('preview_select_file'),
             font=(self.font_family, DEFAULT_TEXT_FONT_SIZE, 'bold')
         )
-        preview_label.pack(fill='x', pady=(16, 5))
+        preview_label.grid(row=1, column=0, sticky='ew', pady=(18, 6))
 
         preview_frame = ttk.Frame(result_frame)
-        preview_frame.pack(fill='both', expand=True, pady=5)
+        preview_frame.grid(row=2, column=0, sticky='nsew')
 
         # 왼쪽 파일 미리보기
         left_preview_frame = ttk.Frame(preview_frame)
         left_preview_frame.pack(side='left', fill='both', expand=True, padx=5)
         ttk.Label(
             left_preview_frame,
-            text="왼쪽 파일",
+            text=self.t('left_file_label'),
             font=(self.font_family, DEFAULT_TEXT_FONT_SIZE - 1, 'bold')
         ).pack()
-        self.folder_preview_left = scrolledtext.ScrolledText(left_preview_frame, wrap='word', width=40, height=15, state='disabled')
+        self.folder_preview_left = scrolledtext.ScrolledText(left_preview_frame, wrap='word', width=40, height=22, state='disabled')
         self.folder_preview_left.pack(fill='both', expand=True)
 
         # 오른쪽 파일 미리보기
@@ -1018,10 +1508,10 @@ class CompareToolApp:
         right_preview_frame.pack(side='left', fill='both', expand=True, padx=5)
         ttk.Label(
             right_preview_frame,
-            text="오른쪽 파일",
+            text=self.t('right_file_label'),
             font=(self.font_family, DEFAULT_TEXT_FONT_SIZE - 1, 'bold')
         ).pack()
-        self.folder_preview_right = scrolledtext.ScrolledText(right_preview_frame, wrap='word', width=40, height=15, state='disabled')
+        self.folder_preview_right = scrolledtext.ScrolledText(right_preview_frame, wrap='word', width=40, height=22, state='disabled')
         self.folder_preview_right.pack(fill='both', expand=True)
 
         # 텍스트 위젯 Notion 스타일
@@ -1233,14 +1723,14 @@ class CompareToolApp:
         build_toolbar(
             control_frame,
             left_specs=[
-                {'label': '비교하기', 'icon': '▶', 'command': self.compare_text, 'role': 'primary'},
+                {'label': self.t('compare'), 'icon': '▶', 'command': self.compare_text, 'role': 'primary'},
             ],
             right_specs=[
-                {'label': '왼쪽으로 적용', 'icon': '📥',
+                {'label': self.t('apply_to_left'), 'icon': '📥',
                  'command': lambda: self.apply_text('to_left'), 'role': 'success'},
-                {'label': '오른쪽으로 적용', 'icon': '📤',
+                {'label': self.t('apply_to_right'), 'icon': '📤',
                  'command': lambda: self.apply_text('to_right'), 'role': 'success'},
-                {'label': '초기화', 'icon': '🔄',
+                {'label': self.t('reset'), 'icon': '🔄',
                  'command': self.clear_text_comparison, 'role': 'ghost'},
             ],
             pady=(0, SECTION_PADDING // 2),
@@ -1251,7 +1741,7 @@ class CompareToolApp:
         text_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
         # 왼쪽 텍스트
-        left_frame = ttk.Labelframe(text_frame, text=" 📝 왼쪽 텍스트 ", padding=10)
+        left_frame = ttk.Labelframe(text_frame, text=f" 📝 {self.t('left_text')} ", padding=10)
         left_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
         self.text_left = scrolledtext.ScrolledText(left_frame, wrap='word', width=40, height=30,
                                                    font=(self.font_family, self.font_size))
@@ -1259,7 +1749,7 @@ class CompareToolApp:
         configure_notion_text_widget(self.text_left, (self.font_family, self.font_size))
 
         # 오른쪽 텍스트
-        right_frame = ttk.Labelframe(text_frame, text=" 📝 오른쪽 텍스트 ", padding=10)
+        right_frame = ttk.Labelframe(text_frame, text=f" 📝 {self.t('right_text')} ", padding=10)
         right_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
         self.text_right = scrolledtext.ScrolledText(right_frame, wrap='word', width=40, height=30,
                                                     font=(self.font_family, self.font_size))
@@ -1291,20 +1781,20 @@ class CompareToolApp:
         build_history_favorite_row(history_fav_frame, self, 'file')
 
         # 왼쪽 파일 선택
-        ttk.Label(control_frame, text="왼쪽 파일:").grid(row=1, column=0, sticky='w', padx=(0, 8), pady=5)
+        ttk.Label(control_frame, text=self.t('left_file')).grid(row=1, column=0, sticky='w', padx=(0, 8), pady=5)
         self.file_left_var = tk.StringVar()
         self.file_left_entry = ttk.Entry(control_frame, textvariable=self.file_left_var)
         self.file_left_entry.grid(row=1, column=1, sticky='ew', padx=(0, 8), pady=5)
-        create_action_button(control_frame, "찾아보기",
+        create_action_button(control_frame, self.t('browse'),
                              command=lambda: self.browse_file(self.file_left_var, self.file_left_entry),
                              role='secondary', icon='📄').grid(row=1, column=2, padx=0, pady=5)
 
         # 오른쪽 파일 선택
-        ttk.Label(control_frame, text="오른쪽 파일:").grid(row=2, column=0, sticky='w', padx=(0, 8), pady=5)
+        ttk.Label(control_frame, text=self.t('right_file')).grid(row=2, column=0, sticky='w', padx=(0, 8), pady=5)
         self.file_right_var = tk.StringVar()
         self.file_right_entry = ttk.Entry(control_frame, textvariable=self.file_right_var)
         self.file_right_entry.grid(row=2, column=1, sticky='ew', padx=(0, 8), pady=5)
-        create_action_button(control_frame, "찾아보기",
+        create_action_button(control_frame, self.t('browse'),
                              command=lambda: self.browse_file(self.file_right_var, self.file_right_entry),
                              role='secondary', icon='📄').grid(row=2, column=2, padx=0, pady=5)
 
@@ -1319,11 +1809,11 @@ class CompareToolApp:
         build_toolbar(
             button_container,
             left_specs=[
-                {'label': '비교하기', 'icon': '▶', 'command': self.compare_files, 'role': 'primary'},
-                {'label': '재비교 (편집 후)', 'icon': '🔄', 'command': self.recompare_files, 'role': 'secondary'},
+                {'label': self.t('compare'), 'icon': '▶', 'command': self.compare_files, 'role': 'primary'},
+                {'label': self.t('recompare_after_edit'), 'icon': '🔄', 'command': self.recompare_files, 'role': 'secondary'},
             ],
             right_specs=[
-                {'label': '초기화', 'icon': '↻', 'command': self.clear_file_comparison, 'role': 'ghost'},
+                {'label': self.t('reset'), 'icon': '↻', 'command': self.clear_file_comparison, 'role': 'ghost'},
             ],
             pady=(0, 6),
         )
@@ -1332,19 +1822,19 @@ class CompareToolApp:
         build_toolbar(
             button_container,
             left_specs=[
-                {'label': '왼쪽 블록 복사', 'icon': '◀',
+                {'label': self.t('left_block_copy'), 'icon': '◀',
                  'command': self.copy_diff_to_left, 'role': 'secondary'},
-                {'label': '오른쪽 블록 복사', 'icon': '▶',
+                {'label': self.t('right_block_copy'), 'icon': '▶',
                  'command': self.copy_diff_to_right, 'role': 'secondary'},
-                {'label': '왼쪽 전체 덮어쓰기', 'icon': '◀◀',
+                {'label': self.t('overwrite_left_all'), 'icon': '◀◀',
                  'command': self.copy_all_to_left, 'role': 'destructive'},
-                {'label': '오른쪽 전체 덮어쓰기', 'icon': '▶▶',
+                {'label': self.t('overwrite_right_all'), 'icon': '▶▶',
                  'command': self.copy_all_to_right, 'role': 'destructive'},
             ],
             right_specs=[
-                {'label': '왼쪽 파일 저장', 'icon': '💾',
+                {'label': self.t('save_left_file'), 'icon': '💾',
                  'command': lambda: self.save_file('left'), 'role': 'success'},
-                {'label': '오른쪽 파일 저장', 'icon': '💾',
+                {'label': self.t('save_right_file'), 'icon': '💾',
                  'command': lambda: self.save_file('right'), 'role': 'success'},
             ],
             pady=(0, 0),
@@ -1354,9 +1844,9 @@ class CompareToolApp:
         build_toolbar(
             button_container,
             left_specs=[
-                {'label': '이전 diff', 'icon': '⏮',
+                {'label': self.t('prev_diff'), 'icon': '⏮',
                  'command': self.goto_prev_diff, 'role': 'ghost'},
-                {'label': '다음 diff', 'icon': '⏭',
+                {'label': self.t('next_diff'), 'icon': '⏭',
                  'command': self.goto_next_diff, 'role': 'ghost'},
             ],
             right_specs=None,
@@ -1368,7 +1858,7 @@ class CompareToolApp:
         file_text_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
         # 왼쪽 파일 내용 (편집 가능)
-        left_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 왼쪽 파일 내용 (편집 가능) ", padding=10)
+        left_file_frame = ttk.Labelframe(file_text_frame, text=f" 📄 {self.t('left_file_content_editable')} ", padding=10)
         left_file_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
         self.file_status_left = ttk.Label(
             left_file_frame, text="1:1",
@@ -1385,7 +1875,7 @@ class CompareToolApp:
         configure_notion_text_widget(self.file_text_left, (self.font_family, self.font_size))
 
         # 오른쪽 파일 내용 (편집 가능)
-        right_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 오른쪽 파일 내용 (편집 가능) ", padding=10)
+        right_file_frame = ttk.Labelframe(file_text_frame, text=f" 📄 {self.t('right_file_content_editable')} ", padding=10)
         right_file_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
         self.file_status_right = ttk.Label(
             right_file_frame, text="1:1",
@@ -1521,11 +2011,11 @@ class CompareToolApp:
             context_menu.delete(0, tk.END)  # 기존 메뉴 항목 제거
 
             # 메뉴 항목 추가 (OS에 맞는 단축키 표시)
-            context_menu.add_command(label=f"복사 ({key_modifier}+C)", command=do_copy)
-            context_menu.add_command(label=f"잘라내기 ({key_modifier}+X)", command=do_cut)
-            context_menu.add_command(label=f"붙여넣기 ({key_modifier}+V)", command=do_paste)
+            context_menu.add_command(label=f"{self.t('copy')} ({key_modifier}+C)", command=do_copy)
+            context_menu.add_command(label=f"{self.t('cut')} ({key_modifier}+X)", command=do_cut)
+            context_menu.add_command(label=f"{self.t('paste')} ({key_modifier}+V)", command=do_paste)
             context_menu.add_separator()
-            context_menu.add_command(label=f"전체 선택 ({key_modifier}+A)", command=do_select_all)
+            context_menu.add_command(label=f"{self.t('select_all')} ({key_modifier}+A)", command=do_select_all)
 
             # 메뉴 표시
             try:
@@ -1597,24 +2087,24 @@ class CompareToolApp:
             context_menu.delete(0, tk.END)
 
             # 기본 클립보드 작업
-            context_menu.add_command(label=f"복사 ({key_modifier}+C)", command=do_copy)
-            context_menu.add_command(label=f"잘라내기 ({key_modifier}+X)", command=do_cut)
-            context_menu.add_command(label=f"붙여넣기 ({key_modifier}+V)", command=do_paste)
+            context_menu.add_command(label=f"{self.t('copy')} ({key_modifier}+C)", command=do_copy)
+            context_menu.add_command(label=f"{self.t('cut')} ({key_modifier}+X)", command=do_cut)
+            context_menu.add_command(label=f"{self.t('paste')} ({key_modifier}+V)", command=do_paste)
             context_menu.add_separator()
-            context_menu.add_command(label=f"전체 선택 ({key_modifier}+A)", command=do_select_all)
+            context_menu.add_command(label=f"{self.t('select_all')} ({key_modifier}+A)", command=do_select_all)
 
             # 차이점이 있을 때만 복사 메뉴 추가
             if len(self.file_diff_blocks) > 0:
                 context_menu.add_separator()
                 if is_left:
-                    context_menu.add_command(label="◀ 왼쪽으로 복사 (현재 블록)",
+                    context_menu.add_command(label=self.t('copy_current_block_to_left'),
                                            command=self.copy_diff_to_left)
-                    context_menu.add_command(label="오른쪽으로 복사 ▶ (현재 블록)",
+                    context_menu.add_command(label=self.t('copy_current_block_to_right'),
                                            command=self.copy_diff_to_right)
                 else:
-                    context_menu.add_command(label="◀ 왼쪽으로 복사 (현재 블록)",
+                    context_menu.add_command(label=self.t('copy_current_block_to_left'),
                                            command=self.copy_diff_to_left)
-                    context_menu.add_command(label="오른쪽으로 복사 ▶ (현재 블록)",
+                    context_menu.add_command(label=self.t('copy_current_block_to_right'),
                                            command=self.copy_diff_to_right)
 
             try:
@@ -1797,11 +2287,11 @@ class CompareToolApp:
         right_folder = self.right_folder_var.get()
 
         if not left_folder or not right_folder:
-            messagebox.showwarning("경고", "두 폴더를 모두 선택해주세요.")
+            messagebox.showwarning(self.t('title_warning'), self.t('select_both_folders'))
             return
 
         if not os.path.exists(left_folder) or not os.path.exists(right_folder):
-            messagebox.showerror("오류", "선택한 폴더가 존재하지 않습니다.")
+            messagebox.showerror(self.t('title_error'), self.t('selected_folder_missing'))
             return
 
         # 히스토리에 추가
@@ -1946,7 +2436,7 @@ class CompareToolApp:
                     file_name = path_parts[-1]
                     file_item = self.folder_tree.insert(
                         parent_id, 'end', text=f"{status_icon}{file_name}",
-                        values=(status, left_size, left_mtime, right_size, right_mtime),
+                        values=(self._folder_status_label(status), left_size, left_mtime, right_size, right_mtime),
                         tags=(status_tag,) if status_tag else ()
                     )
                     self._folder_tree_raw_names[file_item] = file_name
@@ -1954,7 +2444,7 @@ class CompareToolApp:
                     # 루트에 있는 파일
                     file_item = self.folder_tree.insert(
                         '', 'end', text=f"{status_icon}{rel_path}",
-                        values=(status, left_size, left_mtime, right_size, right_mtime),
+                        values=(self._folder_status_label(status), left_size, left_mtime, right_size, right_mtime),
                         tags=(status_tag,) if status_tag else ()
                     )
                     self._folder_tree_raw_names[file_item] = rel_path
@@ -1963,16 +2453,16 @@ class CompareToolApp:
         self._annotate_folder_diff_counts(folder_nodes, folder_stats)
 
         # 완료 메시지
-        message = f"비교가 완료되었습니다.\n차이가 있는 파일: {diff_count}개"
+        message = self.t('folder_compare_done', count=diff_count)
         if len(excluded_files) > 0:
-            message += f"\n제외된 파일: {len(excluded_files)}개"
-        messagebox.showinfo("완료", message)
+            message += f"\n{self.t('excluded_files_count', count=len(excluded_files))}"
+        messagebox.showinfo(self.t('title_done'), message)
 
     def copy_file(self, direction):
         """파일 복사 (폴더 선택 시 하위 모든 파일 복사)"""
         selected = self.folder_tree.selection()
         if not selected:
-            messagebox.showwarning("경고", "복사할 파일 또는 폴더를 선택해주세요.")
+            messagebox.showwarning(self.t('title_warning'), self.t('select_file_or_folder_to_copy'))
             return
 
         left_folder = self.left_folder_var.get()
@@ -1992,13 +2482,17 @@ class CompareToolApp:
         all_file_items = list(set(all_file_items))
 
         if not all_file_items:
-            messagebox.showwarning("경고", "복사할 파일이 없습니다.")
+            messagebox.showwarning(self.t('title_warning'), self.t('no_files_to_copy'))
             return
 
         # 확인 메시지
         if len(all_file_items) > 1:
-            direction_text = "왼쪽에서 오른쪽으로" if direction == 'left_to_right' else "오른쪽에서 왼쪽으로"
-            if not messagebox.askyesno("확인", f"{len(all_file_items)}개의 파일을 {direction_text} 복사하시겠습니까?"):
+            direction_key = 'direction_left_to_right' if direction == 'left_to_right' else 'direction_right_to_left'
+            direction_text = self.t(direction_key)
+            if not messagebox.askyesno(
+                self.t('title_confirm'),
+                self.t('copy_confirm', count=len(all_file_items), direction=direction_text)
+            ):
                 return
 
         # 파일 복사
@@ -2023,26 +2517,30 @@ class CompareToolApp:
                 error_messages.append(f"{rel_path}: {str(e)}")
 
         # 결과 메시지
-        result_msg = f"{copied_count}개 파일이 복사되었습니다."
+        result_msg = self.t('copied_files_result', count=copied_count)
         if error_count > 0:
-            result_msg += f"\n{error_count}개 파일 복사 실패."
+            result_msg += f"\n{self.t('copy_failed_count', count=error_count)}"
             if len(error_messages) <= 5:
-                result_msg += "\n\n실패한 파일:\n" + "\n".join(error_messages)
+                result_msg += f"\n\n{self.t('failed_files')}\n" + "\n".join(error_messages)
             else:
-                result_msg += "\n\n실패한 파일:\n" + "\n".join(error_messages[:5]) + f"\n... 외 {len(error_messages)-5}개"
+                result_msg += (
+                    f"\n\n{self.t('failed_files')}\n"
+                    + "\n".join(error_messages[:5])
+                    + f"\n{self.t('failed_files_more', count=len(error_messages) - 5)}"
+                )
 
         if copied_count > 0:
-            messagebox.showinfo("완료", result_msg)
+            messagebox.showinfo(self.t('title_done'), result_msg)
             # 비교 다시 실행
             self.compare_folders()
         elif error_count > 0:
-            messagebox.showerror("오류", result_msg)
+            messagebox.showerror(self.t('title_error'), result_msg)
 
     def delete_selected(self):
         """선택한 항목 삭제"""
         selected = self.folder_tree.selection()
         if not selected:
-            messagebox.showwarning("경고", "삭제할 파일을 선택해주세요.")
+            messagebox.showwarning(self.t('title_warning'), self.t('select_files_to_delete'))
             return
 
         # 파일만 카운트
@@ -2053,10 +2551,10 @@ class CompareToolApp:
                 file_count += 1
 
         if file_count == 0:
-            messagebox.showwarning("경고", "삭제할 파일을 선택해주세요. (폴더는 선택할 수 없습니다)")
+            messagebox.showwarning(self.t('title_warning'), self.t('select_files_to_delete_no_folder'))
             return
 
-        if not messagebox.askyesno("확인", f"{file_count}개 파일을 삭제하시겠습니까?"):
+        if not messagebox.askyesno(self.t('title_confirm'), self.t('delete_files_confirm', count=file_count)):
             return
 
         left_folder = self.left_folder_var.get()
@@ -2082,10 +2580,13 @@ class CompareToolApp:
                     os.remove(right_path)
                     deleted_count += 1
             except Exception as e:
-                messagebox.showerror("오류", f"파일 삭제 실패: {rel_path}\n{str(e)}")
+                messagebox.showerror(
+                    self.t('title_error'),
+                    self.t('delete_failed', path=rel_path, error=str(e))
+                )
 
         if deleted_count > 0:
-            messagebox.showinfo("완료", f"{deleted_count}개 파일이 삭제되었습니다.")
+            messagebox.showinfo(self.t('title_done'), self.t('deleted_files_result', count=deleted_count))
             self.compare_folders()
 
     def show_folder_tree_context_menu(self, event):
@@ -2149,9 +2650,9 @@ class CompareToolApp:
                     left_content = f.read()
                 self.folder_preview_left.insert('1.0', left_content)
             except Exception as e:
-                self.folder_preview_left.insert('1.0', f"[파일을 읽을 수 없습니다]\n{str(e)}")
+                self.folder_preview_left.insert('1.0', f"{self.t('file_unreadable_marker')}\n{str(e)}")
         else:
-            self.folder_preview_left.insert('1.0', "[파일이 존재하지 않습니다]")
+            self.folder_preview_left.insert('1.0', self.t('file_missing_marker'))
 
         # 오른쪽 파일 읽기
         if os.path.exists(right_path) and os.path.isfile(right_path):
@@ -2160,9 +2661,9 @@ class CompareToolApp:
                     right_content = f.read()
                 self.folder_preview_right.insert('1.0', right_content)
             except Exception as e:
-                self.folder_preview_right.insert('1.0', f"[파일을 읽을 수 없습니다]\n{str(e)}")
+                self.folder_preview_right.insert('1.0', f"{self.t('file_unreadable_marker')}\n{str(e)}")
         else:
-            self.folder_preview_right.insert('1.0', "[파일이 존재하지 않습니다]")
+            self.folder_preview_right.insert('1.0', self.t('file_missing_marker'))
 
         # 두 파일이 모두 존재하면 차이점 하이라이트
         if left_content and right_content:
@@ -2289,7 +2790,7 @@ class CompareToolApp:
         # 상세 비교 (문자 단위)
         self.compare_text_detailed(self.text_left, self.text_right, left_lines, right_lines)
 
-        messagebox.showinfo("완료", "텍스트 비교가 완료되었습니다.\n차이나는 부분이 연한 붉은색으로 표시됩니다.")
+        messagebox.showinfo(self.t('title_done'), self.t('text_compare_done'))
 
     def apply_text(self, direction):
         """텍스트 적용"""
@@ -2302,7 +2803,7 @@ class CompareToolApp:
             self.text_right.delete('1.0', 'end')
             self.text_right.insert('1.0', left_text)
 
-        messagebox.showinfo("완료", "텍스트가 적용되었습니다.")
+        messagebox.showinfo(self.t('title_done'), self.t('text_applied'))
 
     def clear_text_comparison(self):
         """텍스트 비교 초기화"""
@@ -2340,11 +2841,11 @@ class CompareToolApp:
         right_file = self.file_right_var.get()
 
         if not left_file or not right_file:
-            messagebox.showwarning("경고", "두 파일을 모두 선택해주세요.")
+            messagebox.showwarning(self.t('title_warning'), self.t('select_both_files'))
             return
 
         if not os.path.exists(left_file) or not os.path.exists(right_file):
-            messagebox.showerror("오류", "선택한 파일이 존재하지 않습니다.")
+            messagebox.showerror(self.t('title_error'), self.t('selected_file_missing'))
             return
 
         # 히스토리에 추가
@@ -2377,10 +2878,10 @@ class CompareToolApp:
             self._update_file_status(self.file_text_left, self.file_status_left)
             self._update_file_status(self.file_text_right, self.file_status_right)
 
-            messagebox.showinfo("완료", "파일 비교가 완료되었습니다.\n차이나는 부분이 연한 붉은색으로 표시됩니다.")
+            messagebox.showinfo(self.t('title_done'), self.t('file_compare_done'))
 
         except Exception as e:
-            messagebox.showerror("오류", f"파일을 읽을 수 없습니다:\n{str(e)}")
+            messagebox.showerror(self.t('title_error'), self.t('file_read_failed', error=str(e)))
 
     def save_file(self, side):
         """파일 저장"""
@@ -2392,15 +2893,15 @@ class CompareToolApp:
             content = self.file_text_right.get('1.0', 'end-1c')
 
         if not filepath:
-            messagebox.showwarning("경고", "저장할 파일을 선택해주세요.")
+            messagebox.showwarning(self.t('title_warning'), self.t('select_file_to_save'))
             return
 
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(content)
-            messagebox.showinfo("완료", "파일이 저장되었습니다.")
+            messagebox.showinfo(self.t('title_done'), self.t('file_saved'))
         except Exception as e:
-            messagebox.showerror("오류", f"파일 저장 실패:\n{str(e)}")
+            messagebox.showerror(self.t('title_error'), self.t('file_save_failed', error=str(e)))
 
     def _bind_file_status_events(self, widget, label, side):
         """파일 비교 텍스트 위젯의 라인:컬럼 status bar 이벤트 바인딩"""
@@ -2543,7 +3044,7 @@ class CompareToolApp:
         block = self.find_diff_block_at_cursor(self.file_text_left, self.file_diff_blocks)
 
         if not block:
-            messagebox.showwarning("알림", "커서가 차이점 블록 위에 있지 않습니다.")
+            messagebox.showwarning(self.t('title_notice'), self.t('cursor_not_on_diff'))
             return
 
         # 오른쪽 텍스트에서 해당 블록 범위 삭제 후 왼쪽 내용 삽입
@@ -2574,7 +3075,7 @@ class CompareToolApp:
         block = self.find_diff_block_at_cursor(self.file_text_right, self.file_diff_blocks)
 
         if not block:
-            messagebox.showwarning("알림", "커서가 차이점 블록 위에 있지 않습니다.")
+            messagebox.showwarning(self.t('title_notice'), self.t('cursor_not_on_diff'))
             return
 
         # 왼쪽 텍스트에서 해당 블록 범위 삭제 후 오른쪽 내용 삽입
@@ -2622,9 +3123,7 @@ class CompareToolApp:
     def copy_all_to_right(self):
         """왼쪽 파일 전체 내용으로 오른쪽 파일 덮어쓰기"""
         # 확인 메시지
-        result = messagebox.askyesno("확인",
-                                     "오른쪽 파일 내용을 왼쪽 파일 내용으로 완전히 덮어쓰시겠습니까?\n"
-                                     "이 작업은 저장 전까지 취소할 수 있습니다.")
+        result = messagebox.askyesno(self.t('title_confirm'), self.t('overwrite_right_confirm'))
         if not result:
             return
 
@@ -2638,14 +3137,12 @@ class CompareToolApp:
         # 비교 재실행 (하이라이트 업데이트)
         self.recompare_files()
 
-        messagebox.showinfo("완료", "왼쪽 파일 내용으로 오른쪽 파일을 덮어썼습니다.")
+        messagebox.showinfo(self.t('title_done'), self.t('copied_left_to_right_all'))
 
     def copy_all_to_left(self):
         """오른쪽 파일 전체 내용으로 왼쪽 파일 덮어쓰기"""
         # 확인 메시지
-        result = messagebox.askyesno("확인",
-                                     "왼쪽 파일 내용을 오른쪽 파일 내용으로 완전히 덮어쓰시겠습니까?\n"
-                                     "이 작업은 저장 전까지 취소할 수 있습니다.")
+        result = messagebox.askyesno(self.t('title_confirm'), self.t('overwrite_left_confirm'))
         if not result:
             return
 
@@ -2659,7 +3156,7 @@ class CompareToolApp:
         # 비교 재실행 (하이라이트 업데이트)
         self.recompare_files()
 
-        messagebox.showinfo("완료", "오른쪽 파일 내용으로 왼쪽 파일을 덮어썼습니다.")
+        messagebox.showinfo(self.t('title_done'), self.t('copied_right_to_left_all'))
 
     # 히스토리 및 즐겨찾기 관련 메서드
     def load_from_history(self, category):
@@ -2672,7 +3169,7 @@ class CompareToolApp:
             history = self.data_manager.get_text_history()
 
         if not history:
-            messagebox.showinfo("알림", "히스토리가 비어있습니다.")
+            messagebox.showinfo(self.t('title_notice'), self.t('history_empty'))
             return
 
         # 선택 창 열기
@@ -2688,7 +3185,7 @@ class CompareToolApp:
             favorites = self.data_manager.get_text_favorites()
 
         if not favorites:
-            messagebox.showinfo("알림", "즐겨찾기가 비어있습니다.")
+            messagebox.showinfo(self.t('title_notice'), self.t('favorites_empty'))
             return
 
         # 선택 창 열기
@@ -2714,7 +3211,7 @@ class CompareToolApp:
     def _history_item_values(self, item, category):
         """카테고리별 Treeview 컬럼 값"""
         if category == 'folder':
-            return (item.get('left', ''), item.get('right', ''), item.get('method', ''))
+            return (item.get('left', ''), item.get('right', ''), self._method_label(item.get('method', '')))
         if category == 'file':
             return (item.get('left', ''), item.get('right', ''))
         left = (item.get('left_preview') or '').replace('\n', ' ')[:60]
@@ -2725,14 +3222,14 @@ class CompareToolApp:
         """카테고리별 (columns tuple, headings dict, widths dict)"""
         if category == 'folder':
             return (('left', 'right', 'method'),
-                    {'left': '왼쪽 폴더', 'right': '오른쪽 폴더', 'method': '비교 방법'},
+                    {'left': self.t('left_folder_heading'), 'right': self.t('right_folder_heading'), 'method': self.t('compare_method_heading')},
                     {'left': 280, 'right': 280, 'method': 100})
         if category == 'file':
             return (('left', 'right'),
-                    {'left': '왼쪽 파일', 'right': '오른쪽 파일'},
+                    {'left': self.t('left_file_heading'), 'right': self.t('right_file_heading')},
                     {'left': 340, 'right': 340})
         return (('left_preview', 'right_preview'),
-                {'left_preview': '왼쪽 미리보기', 'right_preview': '오른쪽 미리보기'},
+                {'left_preview': self.t('left_preview_heading'), 'right_preview': self.t('right_preview_heading')},
                 {'left_preview': 340, 'right_preview': 340})
 
     def _build_history_tree(self, parent, category, data_type):
@@ -2750,7 +3247,7 @@ class CompareToolApp:
         tree.pack(side='left', fill='both', expand=True)
         scrollbar.config(command=tree.yview)
 
-        head_text = '이름' if data_type == 'favorite' else '시각'
+        head_text = self.t('name_header') if data_type == 'favorite' else self.t('timestamp_header')
         tree.heading('#0', text=head_text, anchor='w')
         tree.column('#0', width=240, minwidth=140, anchor='w', stretch=False)
         for col in columns:
@@ -2788,7 +3285,7 @@ class CompareToolApp:
         """이름 변경용 작은 자식 모달. 확정 시 새 이름 문자열, 취소 시 None 반환."""
         result = {'value': None}
         dialog = tk.Toplevel(parent_win)
-        dialog.title("이름 변경")
+        dialog.title(self.t('rename_title'))
         dialog.transient(parent_win)
         dialog.resizable(False, False)
         try:
@@ -2800,7 +3297,7 @@ class CompareToolApp:
         body.pack(fill='both', expand=True)
 
         ui_font = resolve_ui_font(dialog)
-        ttk.Label(body, text="새 이름을 입력하세요",
+        ttk.Label(body, text=self.t('enter_new_name'),
                   font=(ui_font, 13, 'bold'),
                   foreground=NOTION_COLORS['ink']).pack(anchor='w', pady=(0, 10))
 
@@ -2823,8 +3320,8 @@ class CompareToolApp:
         action_row = ttk.Frame(body)
         action_row.pack(fill='x')
         build_button_row(action_row, [
-            {'label': '취소', 'command': on_cancel, 'role': 'ghost'},
-            {'label': '확인', 'icon': '✓', 'command': on_ok, 'role': 'primary'},
+            {'label': self.t('cancel'), 'command': on_cancel, 'role': 'ghost'},
+            {'label': self.t('ok'), 'icon': '✓', 'command': on_ok, 'role': 'primary'},
         ], align='right', pady=(0, 0))
 
         entry.bind('<Return>', on_ok)
@@ -2864,11 +3361,13 @@ class CompareToolApp:
         mode: 'select' (불러오기 다이얼로그) | 'manage' (관리 다이얼로그)
         """
         is_favorite = (data_type == 'favorite')
-        category_label = {'folder': '폴더 비교',
-                          'file': '파일 비교',
-                          'text': '텍스트 비교'}[category]
+        category_label = {
+            'folder': self.t('folder_compare_category'),
+            'file': self.t('file_compare_category'),
+            'text': self.t('text_compare_category'),
+        }[category]
         kind_icon = '⭐' if is_favorite else '📜'
-        kind_label = '즐겨찾기' if is_favorite else '히스토리'
+        kind_label = self.t('favorites_kind') if is_favorite else self.t('history_kind')
 
         win = tk.Toplevel(self.root)
         win.title(f"{kind_icon} {kind_label} — {category_label}")
@@ -2910,7 +3409,7 @@ class CompareToolApp:
                                  foreground=NOTION_COLORS['ink'])
         search_entry.pack(side='left', fill='x', expand=True)
 
-        placeholder = '검색...'
+        placeholder = self.t('search_placeholder')
         placeholder_state = {'shown': False}
 
         def show_placeholder():
@@ -2968,17 +3467,17 @@ class CompareToolApp:
             )
             searching = bool(effective_search.strip())
             if searching:
-                count_var.set(f"총 {total}개 · 검색 결과 {visible}개")
+                count_var.set(self.t('total_search_count', total=total, visible=visible))
             else:
-                count_var.set(f"총 {total}개")
+                count_var.set(self.t('total_count', total=total))
 
             tree_container.pack_forget()
             empty_label.pack_forget()
             if total == 0:
-                empty_label.config(text="아직 항목이 없습니다.\n비교를 실행하거나 즐겨찾기를 추가해 보세요.")
+                empty_label.config(text=self.t('no_items_empty'))
                 empty_label.pack(fill='both', expand=True, pady=40)
             elif visible == 0:
-                empty_label.config(text="검색 결과가 없습니다.\n다른 키워드로 시도해 보세요.")
+                empty_label.config(text=self.t('no_search_results'))
                 empty_label.pack(fill='both', expand=True, pady=40)
             else:
                 tree_container.pack(fill='both', expand=True)
@@ -2995,7 +3494,7 @@ class CompareToolApp:
         def do_load(event=None):
             idx = get_selected_index()
             if idx is None:
-                messagebox.showwarning("경고", "항목을 선택해주세요.", parent=win)
+                messagebox.showwarning(self.t('title_warning'), self.t('select_item_warning'), parent=win)
                 return "break"
             items = state['items']
             if idx < 0 or idx >= len(items):
@@ -3017,19 +3516,19 @@ class CompareToolApp:
                 self.text_right.insert('1.0', item.get('right_text', ''))
 
             win.destroy()
-            messagebox.showinfo("완료", "불러오기 완료!")
+            messagebox.showinfo(self.t('title_done'), self.t('load_complete'))
             return "break"
 
         def do_delete(event=None):
             idx = get_selected_index()
             if idx is None:
-                messagebox.showwarning("경고", "삭제할 항목을 선택해주세요.", parent=win)
+                messagebox.showwarning(self.t('title_warning'), self.t('select_item_to_delete_warning'), parent=win)
                 return "break"
             items = state['items']
             if idx < 0 or idx >= len(items):
                 refresh()
                 return "break"
-            if not messagebox.askyesno("확인", "선택한 항목을 삭제하시겠습니까?", parent=win):
+            if not messagebox.askyesno(self.t('title_confirm'), self.t('delete_selected_confirm'), parent=win):
                 return "break"
             if data_type == 'history':
                 self.data_manager.delete_history(category, idx)
@@ -3040,11 +3539,11 @@ class CompareToolApp:
 
         def do_rename(event=None):
             if data_type != 'favorite':
-                messagebox.showinfo("알림", "히스토리는 이름을 변경할 수 없습니다.", parent=win)
+                messagebox.showinfo(self.t('title_notice'), self.t('history_cannot_rename'), parent=win)
                 return "break"
             idx = get_selected_index()
             if idx is None:
-                messagebox.showwarning("경고", "이름을 변경할 항목을 선택해주세요.", parent=win)
+                messagebox.showwarning(self.t('title_warning'), self.t('select_item_to_rename_warning'), parent=win)
                 return "break"
             items = state['items']
             if idx < 0 or idx >= len(items):
@@ -3101,13 +3600,13 @@ class CompareToolApp:
             context_menu.delete(0, tk.END)
 
             if mode == 'select':
-                context_menu.add_command(label='불러오기', command=do_load)
+                context_menu.add_command(label=self.t('load'), command=do_load)
                 context_menu.add_separator()
             elif is_favorite:
-                context_menu.add_command(label='이름 변경', command=do_rename)
+                context_menu.add_command(label=self.t('rename'), command=do_rename)
                 context_menu.add_separator()
 
-            context_menu.add_command(label='선택 항목 삭제', command=do_delete)
+            context_menu.add_command(label=self.t('delete_selected'), command=do_delete)
             try:
                 context_menu.tk_popup(event.x_root, event.y_root, 0)
             finally:
@@ -3120,20 +3619,20 @@ class CompareToolApp:
 
         # 액션 버튼 구성
         delete_specs = [
-            {'label': '선택 항목 삭제', 'icon': '🗑️',
+            {'label': self.t('delete_selected'), 'icon': '🗑️',
              'command': do_delete, 'role': 'destructive'},
         ]
         if mode == 'select':
             right_specs = [
-                {'label': '취소', 'command': win.destroy, 'role': 'ghost'},
-                {'label': '불러오기', 'icon': '▶', 'command': do_load, 'role': 'primary'},
+                {'label': self.t('cancel'), 'command': win.destroy, 'role': 'ghost'},
+                {'label': self.t('load'), 'icon': '▶', 'command': do_load, 'role': 'primary'},
             ]
         else:  # manage
             right_specs = []
             if is_favorite:
-                right_specs.append({'label': '이름 변경', 'icon': '✏️',
+                right_specs.append({'label': self.t('rename'), 'icon': '✏️',
                                     'command': do_rename, 'role': 'secondary'})
-            right_specs.append({'label': '닫기', 'command': win.destroy, 'role': 'ghost'})
+            right_specs.append({'label': self.t('close'), 'command': win.destroy, 'role': 'ghost'})
 
         build_toolbar(action_frame, left_specs=delete_specs, right_specs=right_specs, pady=(0, 0))
 
@@ -3171,7 +3670,7 @@ class CompareToolApp:
 
     def add_to_favorite(self, category):
         """즐겨찾기에 추가"""
-        name = simpledialog.askstring("즐겨찾기 추가", "즐겨찾기 이름을 입력하세요:")
+        name = simpledialog.askstring(self.t('favorite_add_title'), self.t('favorite_add_prompt'))
         if not name:
             return
 
@@ -3179,37 +3678,37 @@ class CompareToolApp:
             left = self.left_folder_var.get()
             right = self.right_folder_var.get()
             if not left or not right:
-                messagebox.showwarning("경고", "폴더를 선택해주세요.")
+                messagebox.showwarning(self.t('title_warning'), self.t('select_folder_warning'))
                 return
             self.data_manager.add_folder_favorite(name, left, right, self.compare_method_var.get())
         elif category == 'file':
             left = self.file_left_var.get()
             right = self.file_right_var.get()
             if not left or not right:
-                messagebox.showwarning("경고", "파일을 선택해주세요.")
+                messagebox.showwarning(self.t('title_warning'), self.t('select_file_warning'))
                 return
             self.data_manager.add_file_favorite(name, left, right)
         else:  # text
             left_text = self.text_left.get('1.0', 'end-1c')
             right_text = self.text_right.get('1.0', 'end-1c')
             if not left_text and not right_text:
-                messagebox.showwarning("경고", "텍스트를 입력해주세요.")
+                messagebox.showwarning(self.t('title_warning'), self.t('enter_text_warning'))
                 return
             self.data_manager.add_text_favorite(name, left_text, right_text)
 
-        messagebox.showinfo("완료", "즐겨찾기에 추가되었습니다.")
+        messagebox.showinfo(self.t('title_done'), self.t('favorite_added'))
 
     def show_history_manager(self, category):
         """히스토리 관리 창"""
         if category == 'folder':
             items = self.data_manager.get_folder_history()
-            title = "폴더 비교 히스토리"
+            title = self.t('menu_folder_history')
         elif category == 'file':
             items = self.data_manager.get_file_history()
-            title = "파일 비교 히스토리"
+            title = self.t('menu_file_history')
         else:
             items = self.data_manager.get_text_history()
-            title = "텍스트 비교 히스토리"
+            title = self.t('menu_text_history')
 
         self.show_manager_window(category, 'history', items, title)
 
@@ -3217,13 +3716,13 @@ class CompareToolApp:
         """즐겨찾기 관리 창"""
         if category == 'folder':
             items = self.data_manager.get_folder_favorites()
-            title = "폴더 비교 즐겨찾기"
+            title = self.t('menu_folder_favorite')
         elif category == 'file':
             items = self.data_manager.get_file_favorites()
-            title = "파일 비교 즐겨찾기"
+            title = self.t('menu_file_favorite')
         else:
             items = self.data_manager.get_text_favorites()
-            title = "텍스트 비교 즐겨찾기"
+            title = self.t('menu_text_favorite')
 
         self.show_manager_window(category, 'favorite', items, title)
 
@@ -3234,7 +3733,7 @@ class CompareToolApp:
     def show_font_settings(self):
         """폰트 설정 대화상자"""
         win = tk.Toplevel(self.root)
-        win.title("폰트 설정")
+        win.title(self.t('font_settings'))
         win.geometry("500x380")
         win.resizable(True, True)
 
@@ -3249,7 +3748,7 @@ class CompareToolApp:
         # 설명
         ttk.Label(
             main_frame,
-            text="폴더 목록 및 비교 창의 폰트를 설정합니다.",
+            text=self.t('font_settings_desc'),
             font=(self.font_family, DEFAULT_TEXT_FONT_SIZE)
         ).pack(pady=(0, 20))
 
@@ -3257,7 +3756,7 @@ class CompareToolApp:
         font_family_frame = ttk.Frame(main_frame)
         font_family_frame.pack(fill='x', pady=10)
 
-        ttk.Label(font_family_frame, text="폰트:", width=15).pack(side='left')
+        ttk.Label(font_family_frame, text=self.t('font'), width=15).pack(side='left')
         font_family_var = tk.StringVar(value=self.font_family)
 
         # 일반적으로 사용 가능한 폰트 목록
@@ -3277,7 +3776,7 @@ class CompareToolApp:
         font_size_frame = ttk.Frame(main_frame)
         font_size_frame.pack(fill='x', pady=10)
 
-        ttk.Label(font_size_frame, text="크기:", width=15).pack(side='left')
+        ttk.Label(font_size_frame, text=self.t('size'), width=15).pack(side='left')
         font_size_var = tk.IntVar(value=self.font_size)
 
         size_spinbox = ttk.Spinbox(font_size_frame, from_=8, to=20,
@@ -3285,13 +3784,13 @@ class CompareToolApp:
         size_spinbox.pack(side='left', padx=5)
 
         # 미리보기
-        preview_frame = ttk.Labelframe(main_frame, text="미리보기", padding=10)
+        preview_frame = ttk.Labelframe(main_frame, text=self.t('preview'), padding=10)
         preview_frame.pack(fill='x', expand=False, pady=10)
 
         preview_text = tk.Text(preview_frame, height=3, wrap='none')
         preview_text.pack(fill='both', expand=False)
         configure_notion_text_widget(preview_text, (font_family_var.get(), font_size_var.get()))
-        preview_text.insert('1.0', "The quick brown fox jumps over the lazy dog\n빠른 갈색 여우가 게으른 개를 뛰어넘습니다\n0123456789")
+        preview_text.insert('1.0', self.t('font_preview_text'))
 
         def update_preview(*args):
             try:
@@ -3312,14 +3811,14 @@ class CompareToolApp:
             self.font_size = font_size_var.get()
             self.data_manager.set_font_settings(self.font_family, self.font_size)
             self.apply_fonts()
-            messagebox.showinfo("완료", "폰트 설정이 적용되었습니다.")
+            messagebox.showinfo(self.t('title_done'), self.t('font_settings_applied'))
             win.destroy()
 
         build_button_row(
             button_frame,
             [
-                {'label': '취소', 'command': win.destroy, 'role': 'ghost'},
-                {'label': '적용', 'icon': '✓', 'command': apply_settings, 'role': 'primary'},
+                {'label': self.t('cancel'), 'command': win.destroy, 'role': 'ghost'},
+                {'label': self.t('apply'), 'icon': '✓', 'command': apply_settings, 'role': 'primary'},
             ],
             align='right',
             pady=(0, 0),
@@ -3361,17 +3860,14 @@ class CompareToolApp:
     def open_exclude_patterns_dialog(self):
         """제외 패턴 설정 다이얼로그 열기"""
         dialog = tk.Toplevel(self.root)
-        dialog.title("폴더 비교 제외 패턴 설정")
+        dialog.title(self.t('exclude_patterns_title'))
         dialog.geometry("800x650")
 
         # 상단 설명
         info_frame = ttk.Frame(dialog)
         info_frame.pack(fill='x', padx=10, pady=10)
 
-        info_text = """제외할 파일이나 폴더 패턴을 입력하세요 (.gitignore 형식)
-• 한 줄에 하나의 패턴을 입력합니다
-• # 으로 시작하는 줄은 주석으로 처리됩니다
-• 예시: node_modules/, *.pyc, __pycache__/, .git/, *.log"""
+        info_text = self.t('exclude_patterns_info')
 
         ttk.Label(
             info_frame,
@@ -3399,16 +3895,7 @@ class CompareToolApp:
             text_widget.insert('1.0', '\n'.join(patterns))
         else:
             # 기본 패턴 예시
-            default_patterns = [
-                "# 일반적으로 제외되는 폴더/파일 예시",
-                "# node_modules/",
-                "# .git/",
-                "# __pycache__/",
-                "# *.pyc",
-                "# .DS_Store",
-                "# Thumbs.db"
-            ]
-            text_widget.insert('1.0', '\n'.join(default_patterns))
+            text_widget.insert('1.0', self.t('exclude_default_examples'))
 
         # 버튼 영역
         button_frame = ttk.Frame(dialog)
@@ -3427,20 +3914,20 @@ class CompareToolApp:
                     patterns.append(line)
 
             self.data_manager.set_exclude_patterns(patterns)
-            messagebox.showinfo("성공", f"{len(patterns)}개의 제외 패턴이 저장되었습니다.")
+            messagebox.showinfo(self.t('title_success'), self.t('pattern_saved', count=len(patterns)))
             dialog.destroy()
 
         def clear_patterns():
             """패턴 초기화"""
-            if messagebox.askyesno("확인", "모든 제외 패턴을 삭제하시겠습니까?"):
+            if messagebox.askyesno(self.t('title_confirm'), self.t('clear_patterns_confirm')):
                 text_widget.delete('1.0', 'end')
 
         build_button_row(
             button_frame,
             [
-                {'label': '취소', 'command': dialog.destroy, 'role': 'ghost'},
-                {'label': '초기화', 'icon': '↻', 'command': clear_patterns, 'role': 'secondary'},
-                {'label': '저장', 'icon': '💾', 'command': save_patterns, 'role': 'primary'},
+                {'label': self.t('cancel'), 'command': dialog.destroy, 'role': 'ghost'},
+                {'label': self.t('reset'), 'icon': '↻', 'command': clear_patterns, 'role': 'secondary'},
+                {'label': self.t('save'), 'icon': '💾', 'command': save_patterns, 'role': 'primary'},
             ],
             align='right',
             pady=(0, 0),
