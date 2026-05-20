@@ -1,11 +1,16 @@
 # Conferatur - 파일/폴더 비교 도구
 
+<p align="center">
+  <img src="assets/logo/conferatur-logo.svg" alt="Conferatur logo" width="420">
+</p>
+
 [한국어](README.md) | [English](README.en.md)
 
 Python tkinter 기반의 직관적인 파일 및 폴더 비교 도구입니다.
 
 ## ✨ 새로운 기능 (최신 업데이트)
 
+- 🧭 **Compare Mark 로고 적용** - 두 문서/패널과 중앙 비교 라인으로 앱 정체성을 표현하는 미니멀 로고
 - 🎨 **Notion 스타일 디자인 시스템** 적용 - 정돈된 톤의 모던 UI, PretendardStd 기본 폰트
 - 🌐 **영어 UI 전환 지원** - 설정 메뉴에서 한국어/English를 즉시 전환하고 선택 언어를 자동 저장
 - 🌳 **폴더 트리 강화** - 상태별 색상 태그(diff/left_only/right_only), 컬럼 정렬, 차이 개수 배지, ⊞ 모두 펼치기 / ⊟ 모두 접기 버튼

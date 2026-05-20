@@ -1,11 +1,16 @@
 # Conferatur - File/Folder Compare Tool
 
+<p align="center">
+  <img src="assets/logo/conferatur-logo.svg" alt="Conferatur logo" width="420">
+</p>
+
 [Korean](README.md) | [English](README.en.md)
 
 Conferatur is an intuitive file and folder comparison tool built with Python tkinter.
 
 ## Latest Updates
 
+- **Compare Mark logo**: a minimal identity built around two document panels and a central comparison spine.
 - **Notion-style design system**: a calmer modern UI with PretendardStd as the default font.
 - **English UI language switch**: switch between Korean and English from the Settings menu, with the selection saved automatically.
 - **Enhanced folder tree**: status color tags, sortable columns, difference-count badges, and Expand All / Collapse All buttons.

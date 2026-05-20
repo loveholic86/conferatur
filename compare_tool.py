@@ -27,6 +27,7 @@ from pathlib import Path
 
 
 PRETENDARD_FONT_DIR = Path(__file__).resolve().parent / 'font' / 'PretendardStd'
+APP_ICON_PATH = Path(__file__).resolve().parent / 'assets' / 'logo' / 'conferatur-icon.png'
 SUPPORTED_LANGUAGES = ('ko', 'en')
 
 UI_STRINGS = {
@@ -771,6 +772,18 @@ def setup_notion_styles(root):
     return ui_font
 
 
+def set_window_icon(root):
+    """Set the app icon when the bundled logo asset is available."""
+    if not APP_ICON_PATH.exists():
+        return
+    try:
+        icon = tk.PhotoImage(file=str(APP_ICON_PATH))
+        root.iconphoto(True, icon)
+        root._app_icon_ref = icon
+    except tk.TclError as exc:
+        print(f"[icon] 앱 아이콘 로드 실패: {exc}", file=sys.stderr)
+
+
 def build_button_text(label, icon=None):
     if icon:
         return f"{icon} {label}"
@@ -1189,7 +1202,7 @@ class CompareToolApp:
         return template
 
     def _update_window_title(self):
-        self.root.title(f"📂 {self.t('app_title')} [{self.os_name}]")
+        self.root.title(f"{self.t('app_title')} [{self.os_name}]")
 
     def _method_label(self, method):
         return {
@@ -3941,6 +3954,7 @@ class CompareToolApp:
 def main():
     # ttkbootstrap Window with minty base and Notion visual overrides
     root = ttk.Window(themename="minty")
+    set_window_icon(root)
     register_pretendard_fonts(root)
     setup_notion_styles(root)
     app = CompareToolApp(root)

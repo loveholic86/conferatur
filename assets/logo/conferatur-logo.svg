@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 180" role="img" aria-labelledby="title desc">
+  <title id="title">Conferatur Logo</title>
+  <desc id="desc">Conferatur wordmark with a minimal two-panel compare mark.</desc>
+  <defs>
+    <filter id="logo-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#1F2937" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <g transform="translate(18 18) scale(0.14)">
+    <rect x="64" y="64" width="896" height="896" rx="204" fill="#F7F6F3"/>
+    <rect x="64" y="64" width="896" height="896" rx="204" fill="none" stroke="#E9E9E7" stroke-width="28"/>
+    <g filter="url(#logo-shadow)">
+      <rect x="230" y="238" width="284" height="548" rx="54" fill="#FFFFFF" stroke="#1F2937" stroke-width="28"/>
+      <path d="M445 238h15c30 0 54 24 54 54v16h-69z" fill="#DDEBF1"/>
+      <rect x="510" y="238" width="284" height="548" rx="54" fill="#FFFFFF" stroke="#1F2937" stroke-width="28"/>
+      <path d="M725 238h15c30 0 54 24 54 54v16h-69z" fill="#DEF4E8"/>
+    </g>
+    <rect x="472" y="300" width="80" height="424" rx="40" fill="#6E4FF6"/>
+    <circle cx="512" cy="402" r="19" fill="#F7F6F3"/>
+    <circle cx="512" cy="512" r="19" fill="#F7F6F3"/>
+    <circle cx="512" cy="622" r="19" fill="#F7F6F3"/>
+    <rect x="292" y="358" width="132" height="30" rx="15" fill="#DDEBF1"/>
+    <rect x="292" y="470" width="152" height="30" rx="15" fill="#FBE4E4"/>
+    <rect x="292" y="582" width="112" height="30" rx="15" fill="#DDEBF1"/>
+    <rect x="600" y="358" width="132" height="30" rx="15" fill="#DEF4E8"/>
+    <rect x="580" y="470" width="152" height="30" rx="15" fill="#FBE4E4"/>
+    <rect x="620" y="582" width="112" height="30" rx="15" fill="#DEF4E8"/>
+  </g>
+
+  <text x="190" y="83" fill="#1F2937" font-family="Pretendard Std, Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="54" font-weight="750" letter-spacing="0">Conferatur</text>
+  <text x="193" y="124" fill="#787774" font-family="Pretendard Std, Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="21" font-weight="500" letter-spacing="0">File and folder comparison with clarity</text>
+  <rect x="191" y="145" width="150" height="10" rx="5" fill="#6E4FF6"/>
+  <rect x="354" y="145" width="84" height="10" rx="5" fill="#DEF4E8"/>
+  <rect x="451" y="145" width="114" height="10" rx="5" fill="#DDEBF1"/>
+</svg>
