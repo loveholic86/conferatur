@@ -1,5 +1,7 @@
 # Conferatur - 파일/폴더 비교 도구
 
+[한국어](README.md) | [English](README.en.md)
+
 Python tkinter 기반의 직관적인 파일 및 폴더 비교 도구입니다.
 
 ## ✨ 새로운 기능 (최신 업데이트)
