@@ -21,6 +21,7 @@ import difflib
 import shutil
 import json
 import fnmatch
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -125,6 +126,9 @@ NOTION_COLORS = {
     'peach': '#FBECDD',
     'rose': '#FBE4E4',
     'rose_ink': '#9B2C2C',
+    'diff_line_left_only_bg': '#FBE4E4',
+    'diff_line_right_only_bg': '#FBE4E4',
+    'diff_line_replace_bg': '#DDEBF1',
     'mint': '#DEF4E8',
     'mint_ink': '#2D6A4F',
     'lavender': '#E8DEEE',
@@ -542,10 +546,17 @@ def configure_notion_text_widget(widget, font=None):
 
 
 def configure_notion_diff_tag(widget, font_family, font_size):
+    widget.tag_configure('diff_line_left_only',
+                         background=NOTION_COLORS['diff_line_left_only_bg'])
+    widget.tag_configure('diff_line_right_only',
+                         background=NOTION_COLORS['diff_line_right_only_bg'])
+    widget.tag_configure('diff_line_replace',
+                         background=NOTION_COLORS['diff_line_replace_bg'])
     widget.tag_config('diff',
                       background=NOTION_COLORS['yellow'],
                       foreground=NOTION_COLORS['error'],
                       font=(font_family, font_size, 'bold'))
+    widget.tag_raise('diff')
 
 
 def configure_notion_listbox(listbox, font=None):
@@ -791,6 +802,9 @@ class CompareToolApp:
         # 파일 비교 차이점 블록 정보 저장
         self.file_diff_blocks = []  # 파일 비교 모드의 차이점 블록 정보
         self.text_diff_blocks = []  # 텍스트 비교 모드의 차이점 블록 정보
+        self._folder_tree_raw_names = {}
+        self._folder_sort_state = {'col': None, 'reverse': False}
+        self._folder_tree_heading_labels = {}
 
         # 메뉴바 생성
         self.create_menubar()
@@ -905,6 +919,10 @@ class CompareToolApp:
                            'command': lambda: self.copy_file('left_to_right'), 'role': 'secondary'},
                           {'label': '오른쪽 → 왼쪽 복사', 'icon': '📥',
                            'command': lambda: self.copy_file('right_to_left'), 'role': 'secondary'},
+                          {'label': '모두 펼치기', 'icon': '⊞',
+                           'command': self.expand_all_folder_tree, 'role': 'ghost'},
+                          {'label': '모두 접기', 'icon': '⊟',
+                           'command': self.collapse_all_folder_tree, 'role': 'ghost'},
                       ],
                       right_specs=[
                           {'label': '선택 항목 삭제', 'icon': '🗑️',
@@ -921,27 +939,32 @@ class CompareToolApp:
         # 트리뷰
         self.folder_tree = ttk.Treeview(tree_frame,
                                         columns=('상태', '왼쪽_크기', '왼쪽_수정일', '오른쪽_크기', '오른쪽_수정일'),
+                                        displaycolumns=('상태', '왼쪽_크기', '오른쪽_크기', '왼쪽_수정일', '오른쪽_수정일'),
                                         yscrollcommand=tree_scroll_y.set,
                                         xscrollcommand=tree_scroll_x.set)
         self.folder_tree.pack(fill='both', expand=True)
+        self._configure_folder_tree_tags()
 
         tree_scroll_y.config(command=self.folder_tree.yview)
         tree_scroll_x.config(command=self.folder_tree.xview)
 
         # 트리뷰 열 설정
-        self.folder_tree.heading('#0', text='파일 경로')
-        self.folder_tree.heading('상태', text='상태')
-        self.folder_tree.heading('왼쪽_크기', text='왼쪽 크기')
-        self.folder_tree.heading('왼쪽_수정일', text='왼쪽 수정일')
-        self.folder_tree.heading('오른쪽_크기', text='오른쪽 크기')
-        self.folder_tree.heading('오른쪽_수정일', text='오른쪽 수정일')
+        self._folder_tree_heading_labels = {
+            '#0': '파일 경로',
+            '상태': '상태',
+            '왼쪽_크기': '왼쪽 크기',
+            '오른쪽_크기': '오른쪽 크기',
+            '왼쪽_수정일': '왼쪽 수정일',
+            '오른쪽_수정일': '오른쪽 수정일',
+        }
+        self._update_folder_tree_headings()
 
-        self.folder_tree.column('#0', width=300)
-        self.folder_tree.column('상태', width=100)
-        self.folder_tree.column('왼쪽_크기', width=100)
-        self.folder_tree.column('왼쪽_수정일', width=150)
-        self.folder_tree.column('오른쪽_크기', width=100)
-        self.folder_tree.column('오른쪽_수정일', width=150)
+        self.folder_tree.column('#0', width=360, minwidth=220)
+        self.folder_tree.column('상태', width=150, minwidth=120)
+        self.folder_tree.column('왼쪽_크기', width=85, minwidth=70, anchor='e')
+        self.folder_tree.column('오른쪽_크기', width=85, minwidth=70, anchor='e')
+        self.folder_tree.column('왼쪽_수정일', width=155, minwidth=135)
+        self.folder_tree.column('오른쪽_수정일', width=155, minwidth=135)
 
         # 트리뷰 선택 이벤트 바인딩
         self.folder_tree.bind('<<TreeviewSelect>>', self.on_folder_tree_select)
@@ -1011,6 +1034,187 @@ class CompareToolApp:
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.folder_preview_left, self.folder_preview_right)
+
+    def _configure_folder_tree_tags(self):
+        """폴더 비교 트리의 상태별 시각 태그를 등록."""
+        self.folder_tree.tag_configure('diff',
+                                       background='#FCE7E7',
+                                       foreground=NOTION_COLORS['rose_ink'])
+        self.folder_tree.tag_configure('left_only',
+                                       background='#F2F2F0',
+                                       foreground='#6F6E69')
+        self.folder_tree.tag_configure('right_only',
+                                       background='#F2F2F0',
+                                       foreground='#6F6E69')
+        self.folder_tree.tag_configure('left_newer',
+                                       background=NOTION_COLORS['peach'],
+                                       foreground='#9C4221')
+        self.folder_tree.tag_configure('right_newer',
+                                       background=NOTION_COLORS['peach'],
+                                       foreground='#9C4221')
+        self.folder_tree.tag_configure('folder',
+                                       background=NOTION_COLORS['canvas'],
+                                       foreground=NOTION_COLORS['ink'],
+                                       font=(self.font_family, DEFAULT_TEXT_FONT_SIZE, 'bold'))
+
+    def _set_folder_tree_open_state(self, open_state, parent=''):
+        """폴더 비교 Treeview의 자식 노드를 재귀적으로 펼치거나 접음.
+
+        파일 노드(상태 values 있음)는 자식이 없으므로 open 상태 변경 효과 없음.
+        item text/values/tags는 건드리지 않고 open 속성만 수정한다.
+        """
+        tree = getattr(self, 'folder_tree', None)
+        if tree is None:
+            return
+        for child in tree.get_children(parent):
+            tree.item(child, open=open_state)
+            self._set_folder_tree_open_state(open_state, child)
+
+    def expand_all_folder_tree(self):
+        """폴더 비교 트리의 모든 폴더 노드를 펼침."""
+        self._set_folder_tree_open_state(True)
+
+    def collapse_all_folder_tree(self):
+        """폴더 비교 트리의 모든 폴더 노드를 접음."""
+        self._set_folder_tree_open_state(False)
+
+    def _get_folder_status_visual(self, status):
+        """상태 텍스트를 Treeview tag와 경로 아이콘으로 변환."""
+        status_visuals = {
+            '내용 다름 (MD5)': ('diff', '≠ '),
+            '왼쪽만 존재': ('left_only', '◀ '),
+            '오른쪽만 존재': ('right_only', '▶ '),
+            '왼쪽이 최신': ('left_newer', '⏱ '),
+            '오른쪽이 최신': ('right_newer', '⏱ '),
+            '내용 같음, 왼쪽이 최신': ('left_newer', '⏱ '),
+            '내용 같음, 오른쪽이 최신': ('right_newer', '⏱ '),
+        }
+        return status_visuals.get(status, ('', ''))
+
+    def _get_folder_diff_count_key(self, status):
+        """폴더 배지에서 사용할 상태 카운트 키를 반환."""
+        if status == '내용 다름 (MD5)':
+            return 'differ'
+        if status == '왼쪽만 존재':
+            return 'left_only'
+        if status == '오른쪽만 존재':
+            return 'right_only'
+        if status in (
+            '왼쪽이 최신',
+            '오른쪽이 최신',
+            '내용 같음, 왼쪽이 최신',
+            '내용 같음, 오른쪽이 최신',
+        ):
+            return 'newer'
+        return None
+
+    def _annotate_folder_diff_counts(self, folder_nodes, folder_stats):
+        """폴더 노드 #0 텍스트에 하위 차이 요약 배지를 붙임."""
+        label_specs = (
+            ('differ', 'differ'),
+            ('left_only', 'left-only'),
+            ('right_only', 'right-only'),
+            ('newer', 'newer'),
+        )
+        for folder_path, item_id in folder_nodes.items():
+            stats = folder_stats.get(folder_path, {})
+            label_parts = [
+                f"{stats[key]} {label}"
+                for key, label in label_specs
+                if stats.get(key)
+            ]
+            badge = f" ({', '.join(label_parts)})" if label_parts else ''
+            folder_name = self._folder_tree_raw_names.get(item_id, os.path.basename(folder_path))
+            self.folder_tree.item(item_id, text=f"📁 {folder_name}{badge}")
+
+    def _clean_folder_tree_text(self, text):
+        """raw name dict가 없을 때 표시용 아이콘/배지를 제거하는 fallback."""
+        clean_text = text
+        for prefix in ('📁 ', '≠ ', '◀ ', '▶ ', '⏱ '):
+            if clean_text.startswith(prefix):
+                clean_text = clean_text[len(prefix):]
+                break
+        return re.sub(
+            r'\s+\(\d+ (?:differ|left-only|right-only|newer)'
+            r'(?:, \d+ (?:differ|left-only|right-only|newer))*\)$',
+            '',
+            clean_text
+        )
+
+    def _update_folder_tree_headings(self):
+        """정렬 상태 화살표를 포함해 폴더 Treeview heading을 갱신."""
+        if not getattr(self, 'folder_tree', None):
+            return
+
+        current_col = self._folder_sort_state.get('col')
+        reverse = self._folder_sort_state.get('reverse', False)
+        for col, label in self._folder_tree_heading_labels.items():
+            arrow = ''
+            if col == current_col:
+                arrow = ' ▼' if reverse else ' ▲'
+            self.folder_tree.heading(
+                col,
+                text=f'{label}{arrow}',
+                command=lambda c=col: self._sort_folder_tree(
+                    c,
+                    reverse=(
+                        self._folder_sort_state.get('col') == c
+                        and not self._folder_sort_state.get('reverse', False)
+                    )
+                )
+            )
+
+    def _get_folder_sort_value(self, item, col):
+        """컬럼별 정렬 값을 반환. 크기 컬럼은 숫자로 비교."""
+        if col == '#0':
+            value = self._folder_tree_raw_names.get(
+                item,
+                self._clean_folder_tree_text(self.folder_tree.item(item, 'text'))
+            )
+        else:
+            column_indexes = {
+                '상태': 0,
+                '왼쪽_크기': 1,
+                '왼쪽_수정일': 2,
+                '오른쪽_크기': 3,
+                '오른쪽_수정일': 4,
+            }
+            values = self.folder_tree.item(item, 'values')
+            index = column_indexes.get(col)
+            value = values[index] if index is not None and len(values) > index else ''
+
+        if col in ('왼쪽_크기', '오른쪽_크기'):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return 0
+        return str(value).lower()
+
+    def _sort_folder_tree_children(self, parent, col, reverse):
+        """폴더 우선 그룹을 유지하면서 자식 노드를 재귀 정렬."""
+        children = list(self.folder_tree.get_children(parent))
+        folders = []
+        files = []
+
+        for child in children:
+            values = self.folder_tree.item(child, 'values')
+            if values and values[0]:
+                files.append(child)
+            else:
+                folders.append(child)
+
+        folders.sort(key=lambda item: self._get_folder_sort_value(item, col), reverse=reverse)
+        files.sort(key=lambda item: self._get_folder_sort_value(item, col), reverse=reverse)
+
+        for index, child in enumerate(folders + files):
+            self.folder_tree.move(child, parent, index)
+            self._sort_folder_tree_children(child, col, reverse)
+
+    def _sort_folder_tree(self, col, reverse=False):
+        """폴더 비교 트리를 컬럼 기준으로 정렬."""
+        self._folder_sort_state = {'col': col, 'reverse': reverse}
+        self._sort_folder_tree_children('', col, reverse)
+        self._update_folder_tree_headings()
 
     def setup_text_compare_tab(self):
         """두 번째 모드: 텍스트 직접 비교"""
@@ -1146,6 +1350,19 @@ class CompareToolApp:
             pady=(0, 0),
         )
 
+        # Row 3: diff 점프 nav (ghost)
+        build_toolbar(
+            button_container,
+            left_specs=[
+                {'label': '이전 diff', 'icon': '⏮',
+                 'command': self.goto_prev_diff, 'role': 'ghost'},
+                {'label': '다음 diff', 'icon': '⏭',
+                 'command': self.goto_next_diff, 'role': 'ghost'},
+            ],
+            right_specs=None,
+            pady=(6, 0),
+        )
+
         # 파일 내용 표시 영역
         file_text_frame = ttk.Frame(frame)
         file_text_frame.pack(fill='both', expand=True, padx=10, pady=10)
@@ -1153,6 +1370,14 @@ class CompareToolApp:
         # 왼쪽 파일 내용 (편집 가능)
         left_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 왼쪽 파일 내용 (편집 가능) ", padding=10)
         left_file_frame.pack(side='left', fill='both', expand=True, padx=(0, 8))
+        self.file_status_left = ttk.Label(
+            left_file_frame, text="1:1",
+            foreground=NOTION_COLORS['slate'],
+            font=(self.font_family, DEFAULT_TEXT_FONT_SIZE - 1),
+            anchor='w'
+        )
+        self.status_label_left = self.file_status_left
+        self.file_status_left.pack(side='bottom', fill='x', pady=(6, 0))
         self.file_text_left = scrolledtext.ScrolledText(left_file_frame, wrap='word', width=40, height=30,
                                                         font=(self.font_family, self.font_size),
                                                         state='normal')  # 편집 가능 상태
@@ -1162,6 +1387,14 @@ class CompareToolApp:
         # 오른쪽 파일 내용 (편집 가능)
         right_file_frame = ttk.Labelframe(file_text_frame, text=" 📄 오른쪽 파일 내용 (편집 가능) ", padding=10)
         right_file_frame.pack(side='left', fill='both', expand=True, padx=(8, 0))
+        self.file_status_right = ttk.Label(
+            right_file_frame, text="1:1",
+            foreground=NOTION_COLORS['slate'],
+            font=(self.font_family, DEFAULT_TEXT_FONT_SIZE - 1),
+            anchor='w'
+        )
+        self.status_label_right = self.file_status_right
+        self.file_status_right.pack(side='bottom', fill='x', pady=(6, 0))
         self.file_text_right = scrolledtext.ScrolledText(right_file_frame, wrap='word', width=40, height=30,
                                                          font=(self.font_family, self.font_size),
                                                          state='normal')  # 편집 가능 상태
@@ -1178,6 +1411,11 @@ class CompareToolApp:
 
         # 스크롤 동기화
         self.setup_scroll_sync(self.file_text_left, self.file_text_right)
+
+        # 라인:컬럼 status bar 이벤트 바인딩 및 active widget 추적
+        self._last_active_file_side = 'left'
+        self._bind_file_status_events(self.file_text_left, self.file_status_left, 'left')
+        self._bind_file_status_events(self.file_text_right, self.file_status_right, 'right')
 
     # 유틸리티 메서드
     def enable_clipboard_operations(self, widget):
@@ -1446,11 +1684,10 @@ class CompareToolApp:
         current = item
 
         while current:
-            text = self.folder_tree.item(current, 'text')
-            # 폴더 아이콘 제거
-            if text.startswith("📁 "):
-                text = text[2:]
-            path_parts.insert(0, text)
+            raw_name = self._folder_tree_raw_names.get(current)
+            if raw_name is None:
+                raw_name = self._clean_folder_tree_text(self.folder_tree.item(current, 'text'))
+            path_parts.insert(0, raw_name)
             current = self.folder_tree.parent(current)
 
         return os.path.join(*path_parts) if path_parts else ""
@@ -1573,6 +1810,7 @@ class CompareToolApp:
         # 트리뷰 초기화
         for item in self.folder_tree.get_children():
             self.folder_tree.delete(item)
+        self._folder_tree_raw_names.clear()
 
         compare_method = self.compare_method_var.get()
 
@@ -1613,6 +1851,7 @@ class CompareToolApp:
 
         # 트리 구조를 위한 딕셔너리 (폴더 경로 -> 트리 아이템 ID)
         folder_nodes = {}
+        folder_stats = {}
         diff_count = 0
 
         for rel_path in sorted(all_paths):
@@ -1665,6 +1904,7 @@ class CompareToolApp:
 
             # 차이가 있는 파일만 표시
             if status != "동일":
+                status_tag, status_icon = self._get_folder_status_visual(status)
                 diff_count += 1
                 left_size = left_info['size'] if left_info else ""
                 left_mtime = left_info['mtime'] if left_info else ""
@@ -1678,8 +1918,9 @@ class CompareToolApp:
                 if len(path_parts) > 1:
                     parent_id = ''
                     cumulative_path = ''
+                    count_key = self._get_folder_diff_count_key(status)
 
-                    # 폴더 경로 생성
+                    # 폴더 경로 생성 + 자손 stats 누적
                     for i, part in enumerate(path_parts[:-1]):
                         if cumulative_path:
                             cumulative_path = os.path.join(cumulative_path, part)
@@ -1690,18 +1931,36 @@ class CompareToolApp:
                         if cumulative_path not in folder_nodes:
                             folder_nodes[cumulative_path] = self.folder_tree.insert(
                                 parent_id, 'end', text=f"📁 {part}",
-                                values=('', '', '', '', ''), open=True
+                                values=('', '', '', '', ''), open=True, tags=('folder',)
                             )
+                            self._folder_tree_raw_names[folder_nodes[cumulative_path]] = part
                         parent_id = folder_nodes[cumulative_path]
+
+                        if count_key:
+                            bucket = folder_stats.setdefault(cumulative_path, {
+                                'differ': 0, 'left_only': 0, 'right_only': 0, 'newer': 0
+                            })
+                            bucket[count_key] += 1
 
                     # 파일을 폴더 노드 아래에 추가
                     file_name = path_parts[-1]
-                    self.folder_tree.insert(parent_id, 'end', text=file_name,
-                                            values=(status, left_size, left_mtime, right_size, right_mtime))
+                    file_item = self.folder_tree.insert(
+                        parent_id, 'end', text=f"{status_icon}{file_name}",
+                        values=(status, left_size, left_mtime, right_size, right_mtime),
+                        tags=(status_tag,) if status_tag else ()
+                    )
+                    self._folder_tree_raw_names[file_item] = file_name
                 else:
                     # 루트에 있는 파일
-                    self.folder_tree.insert('', 'end', text=rel_path,
-                                            values=(status, left_size, left_mtime, right_size, right_mtime))
+                    file_item = self.folder_tree.insert(
+                        '', 'end', text=f"{status_icon}{rel_path}",
+                        values=(status, left_size, left_mtime, right_size, right_mtime),
+                        tags=(status_tag,) if status_tag else ()
+                    )
+                    self._folder_tree_raw_names[file_item] = rel_path
+
+        # 폴더 노드에 자손 diff 카운트 배지 적용
+        self._annotate_folder_diff_counts(folder_nodes, folder_stats)
 
         # 완료 메시지
         message = f"비교가 완료되었습니다.\n차이가 있는 파일: {diff_count}개"
@@ -1877,8 +2136,8 @@ class CompareToolApp:
         self.folder_preview_right.config(state='normal')
         self.folder_preview_left.delete('1.0', 'end')
         self.folder_preview_right.delete('1.0', 'end')
-        self.folder_preview_left.tag_remove('diff', '1.0', 'end')
-        self.folder_preview_right.tag_remove('diff', '1.0', 'end')
+        self._clear_diff_highlights(self.folder_preview_left)
+        self._clear_diff_highlights(self.folder_preview_right)
 
         left_content = ""
         right_content = ""
@@ -1920,6 +2179,22 @@ class CompareToolApp:
         end_pos = f"{line_num}.{end_col}"
         text_widget.tag_add('diff', start_pos, end_pos)
 
+    def _add_diff_line_background(self, text_widget, tag_name, start_line_index, end_line_index):
+        """0-based line slice 범위에 hunk 단위 배경 태그를 추가."""
+        for line_index in range(start_line_index, end_line_index):
+            line_num = line_index + 1
+            text_widget.tag_add(tag_name, f"{line_num}.0", f"{line_num + 1}.0")
+
+    def _clear_diff_highlights(self, text_widget):
+        """문자 diff와 hunk line-bg 태그를 함께 제거."""
+        for tag_name in (
+            'diff',
+            'diff_line_left_only',
+            'diff_line_right_only',
+            'diff_line_replace',
+        ):
+            text_widget.tag_remove(tag_name, '1.0', 'end')
+
     def compare_text_detailed(self, left_widget, right_widget, left_lines, right_lines, store_blocks=False, blocks_list=None):
         """문자 단위로 상세 비교하여 하이라이트
 
@@ -1957,16 +2232,20 @@ class CompareToolApp:
 
             if tag == 'delete':
                 # 왼쪽에만 있는 라인들
+                self._add_diff_line_background(left_widget, 'diff_line_left_only', i1, i2)
                 for i in range(i1, i2):
                     self.highlight_text_diff(left_widget, left_lines[i], i+1, 0, len(left_lines[i]))
             elif tag == 'insert':
                 # 오른쪽에만 있는 라인들
+                self._add_diff_line_background(right_widget, 'diff_line_right_only', j1, j2)
                 for j in range(j1, j2):
                     self.highlight_text_diff(right_widget, right_lines[j], j+1, 0, len(right_lines[j]))
             elif tag == 'replace':
                 # 변경된 라인들 - 문자 단위로 상세 비교
                 left_block = left_lines[i1:i2]
                 right_block = right_lines[j1:j2]
+                self._add_diff_line_background(left_widget, 'diff_line_replace', i1, i2)
+                self._add_diff_line_background(right_widget, 'diff_line_replace', j1, j2)
 
                 # 단일 라인 대 단일 라인 비교인 경우 문자 단위 비교
                 if len(left_block) == 1 and len(right_block) == 1:
@@ -1994,8 +2273,8 @@ class CompareToolApp:
     def compare_text(self):
         """텍스트 비교"""
         # 태그 제거
-        self.text_left.tag_remove('diff', '1.0', 'end')
-        self.text_right.tag_remove('diff', '1.0', 'end')
+        self._clear_diff_highlights(self.text_left)
+        self._clear_diff_highlights(self.text_right)
 
         left_text = self.text_left.get('1.0', 'end-1c')
         right_text = self.text_right.get('1.0', 'end-1c')
@@ -2029,8 +2308,8 @@ class CompareToolApp:
         """텍스트 비교 초기화"""
         self.text_left.delete('1.0', 'end')
         self.text_right.delete('1.0', 'end')
-        self.text_left.tag_remove('diff', '1.0', 'end')
-        self.text_right.tag_remove('diff', '1.0', 'end')
+        self._clear_diff_highlights(self.text_left)
+        self._clear_diff_highlights(self.text_right)
 
     def clear_folder_comparison(self):
         """폴더 비교 초기화"""
@@ -2050,8 +2329,10 @@ class CompareToolApp:
         """파일 비교 초기화"""
         self.file_text_left.delete('1.0', 'end')
         self.file_text_right.delete('1.0', 'end')
-        self.file_text_left.tag_remove('diff', '1.0', 'end')
-        self.file_text_right.tag_remove('diff', '1.0', 'end')
+        self._clear_diff_highlights(self.file_text_left)
+        self._clear_diff_highlights(self.file_text_right)
+        self.status_label_left.config(text="1:1")
+        self.status_label_right.config(text="1:1")
 
     def compare_files(self):
         """파일 내용 비교"""
@@ -2084,8 +2365,8 @@ class CompareToolApp:
             self.file_text_right.insert('1.0', right_content)
 
             # 태그 제거
-            self.file_text_left.tag_remove('diff', '1.0', 'end')
-            self.file_text_right.tag_remove('diff', '1.0', 'end')
+            self._clear_diff_highlights(self.file_text_left)
+            self._clear_diff_highlights(self.file_text_right)
 
             # 차이점 하이라이트 (문자 단위 상세 비교) 및 블록 정보 저장
             left_lines = left_content.splitlines()
@@ -2093,6 +2374,8 @@ class CompareToolApp:
 
             self.compare_text_detailed(self.file_text_left, self.file_text_right, left_lines, right_lines,
                                       store_blocks=True, blocks_list=self.file_diff_blocks)
+            self._update_file_status(self.file_text_left, self.file_status_left)
+            self._update_file_status(self.file_text_right, self.file_status_right)
 
             messagebox.showinfo("완료", "파일 비교가 완료되었습니다.\n차이나는 부분이 연한 붉은색으로 표시됩니다.")
 
@@ -2118,6 +2401,114 @@ class CompareToolApp:
             messagebox.showinfo("완료", "파일이 저장되었습니다.")
         except Exception as e:
             messagebox.showerror("오류", f"파일 저장 실패:\n{str(e)}")
+
+    def _bind_file_status_events(self, widget, label, side):
+        """파일 비교 텍스트 위젯의 라인:컬럼 status bar 이벤트 바인딩"""
+        def update_status(event=None):
+            self._update_file_status(widget, label)
+            self._last_active_file_side = side
+            return None
+
+        widget.bind('<KeyRelease>', update_status, add='+')
+        widget.bind('<ButtonRelease-1>', update_status, add='+')
+        widget.bind('<<Selection>>', update_status, add='+')
+        widget.bind('<FocusIn>', update_status, add='+')
+
+    def _update_file_status(self, widget, label):
+        """텍스트 위젯의 현재 커서 위치를 status label에 갱신"""
+        try:
+            idx = widget.index('insert')
+            line, col = idx.split('.')
+            col = int(col) + 1  # 1-based for display
+            label.config(text=f"{line}:{col}")
+        except Exception:
+            pass
+
+    def _active_file_widget(self):
+        """파일 비교 탭에서 현재 활성 위젯/사이드 판별
+
+        Returns:
+            (widget, side) — side는 'left' 또는 'right'
+        """
+        focused = None
+        try:
+            focused = self.root.focus_get()
+        except Exception:
+            focused = None
+
+        if focused is self.file_text_left:
+            return self.file_text_left, 'left'
+        if focused is self.file_text_right:
+            return self.file_text_right, 'right'
+
+        side = getattr(self, '_last_active_file_side', 'left')
+        if side == 'right':
+            return self.file_text_right, 'right'
+        return self.file_text_left, 'left'
+
+    def goto_prev_diff(self):
+        """현재 활성 위젯에서 커서보다 위에 있는 diff 블록의 시작 라인으로 점프"""
+        if not self.file_diff_blocks:
+            return
+        widget, side = self._active_file_widget()
+        try:
+            cur_idx = widget.index('insert')
+            cur_line = int(cur_idx.split('.')[0])
+        except Exception:
+            cur_line = 1
+
+        key = 'left_start' if side == 'left' else 'right_start'
+        target = None
+        for block in self.file_diff_blocks:
+            start = block.get(key)
+            if start is None:
+                continue
+            if start < cur_line:
+                if target is None or start > target:
+                    target = start
+        if target is None:
+            return
+        self._jump_to_diff_line(widget, target)
+
+    def goto_next_diff(self):
+        """현재 활성 위젯에서 커서보다 아래에 있는 diff 블록의 시작 라인으로 점프"""
+        if not self.file_diff_blocks:
+            return
+        widget, side = self._active_file_widget()
+        try:
+            cur_idx = widget.index('insert')
+            cur_line = int(cur_idx.split('.')[0])
+        except Exception:
+            cur_line = 1
+
+        key = 'left_start' if side == 'left' else 'right_start'
+        target = None
+        for block in self.file_diff_blocks:
+            start = block.get(key)
+            if start is None:
+                continue
+            if start > cur_line:
+                if target is None or start < target:
+                    target = start
+        if target is None:
+            return
+        self._jump_to_diff_line(widget, target)
+
+    def _jump_to_diff_line(self, widget, line):
+        """텍스트 위젯의 특정 라인으로 커서 이동 및 view 스크롤"""
+        try:
+            pos = f"{int(line)}.0"
+            widget.mark_set('insert', pos)
+            widget.see(pos)
+            widget.focus_set()
+            if widget is self.file_text_left:
+                self._update_file_status(widget, self.file_status_left)
+                self._last_active_file_side = 'left'
+            elif widget is self.file_text_right:
+                self._update_file_status(widget, self.file_status_right)
+                self._last_active_file_side = 'right'
+        except Exception:
+            pass
 
     def find_diff_block_at_cursor(self, widget, blocks_list):
         """커서 위치에서 차이점 블록 찾기
@@ -2212,8 +2603,8 @@ class CompareToolApp:
     def recompare_files(self):
         """파일 비교 재실행 (하이라이트 업데이트용)"""
         # 태그 제거
-        self.file_text_left.tag_remove('diff', '1.0', 'end')
-        self.file_text_right.tag_remove('diff', '1.0', 'end')
+        self._clear_diff_highlights(self.file_text_left)
+        self._clear_diff_highlights(self.file_text_right)
 
         # 현재 내용 가져오기
         left_content = self.file_text_left.get('1.0', 'end-1c')
@@ -2225,6 +2616,8 @@ class CompareToolApp:
 
         self.compare_text_detailed(self.file_text_left, self.file_text_right, left_lines, right_lines,
                                   store_blocks=True, blocks_list=self.file_diff_blocks)
+        self._update_file_status(self.file_text_left, self.file_status_left)
+        self._update_file_status(self.file_text_right, self.file_status_right)
 
     def copy_all_to_right(self):
         """왼쪽 파일 전체 내용으로 오른쪽 파일 덮어쓰기"""
@@ -2696,24 +3089,53 @@ class CompareToolApp:
                                                 tree.selection_set(tree.get_children()[:1] or ()),
                                                 "break")[-1])
 
+        context_menu = tk.Menu(tree, tearoff=0)
+
+        def show_history_context_menu(event):
+            item_id = tree.identify_row(event.y)
+            if not item_id:
+                return "break"
+
+            tree.selection_set(item_id)
+            tree.focus(item_id)
+            context_menu.delete(0, tk.END)
+
+            if mode == 'select':
+                context_menu.add_command(label='불러오기', command=do_load)
+                context_menu.add_separator()
+            elif is_favorite:
+                context_menu.add_command(label='이름 변경', command=do_rename)
+                context_menu.add_separator()
+
+            context_menu.add_command(label='선택 항목 삭제', command=do_delete)
+            try:
+                context_menu.tk_popup(event.x_root, event.y_root, 0)
+            finally:
+                context_menu.grab_release()
+            return "break"
+
+        tree.bind('<Button-3>', show_history_context_menu)
+        tree.bind('<Button-2>', show_history_context_menu)
+        tree.bind('<Control-Button-1>', show_history_context_menu)
+
         # 액션 버튼 구성
+        delete_specs = [
+            {'label': '선택 항목 삭제', 'icon': '🗑️',
+             'command': do_delete, 'role': 'destructive'},
+        ]
         if mode == 'select':
-            specs = [
+            right_specs = [
                 {'label': '취소', 'command': win.destroy, 'role': 'ghost'},
-                {'label': '삭제', 'icon': '🗑️', 'command': do_delete, 'role': 'destructive'},
                 {'label': '불러오기', 'icon': '▶', 'command': do_load, 'role': 'primary'},
             ]
         else:  # manage
-            specs = [
-                {'label': '닫기', 'command': win.destroy, 'role': 'ghost'},
-            ]
+            right_specs = []
             if is_favorite:
-                specs.append({'label': '이름 변경', 'icon': '✏️',
-                              'command': do_rename, 'role': 'secondary'})
-            specs.append({'label': '삭제', 'icon': '🗑️',
-                          'command': do_delete, 'role': 'destructive'})
+                right_specs.append({'label': '이름 변경', 'icon': '✏️',
+                                    'command': do_rename, 'role': 'secondary'})
+            right_specs.append({'label': '닫기', 'command': win.destroy, 'role': 'ghost'})
 
-        build_button_row(action_frame, specs, align='right', pady=(0, 0))
+        build_toolbar(action_frame, left_specs=delete_specs, right_specs=right_specs, pady=(0, 0))
 
         # placeholder 초기 표시 (focus_set 전에 — 첫 focus_set이 hide_placeholder 트리거)
         show_placeholder()
